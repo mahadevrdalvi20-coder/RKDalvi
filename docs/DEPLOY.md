@@ -1,4 +1,6 @@
-# Deploying R. K. DALVI
+# Deploying R. K. DALVI on your own server
+
+> Using Vercel? Follow [VERCEL.md](VERCEL.md) instead.
 
 The app is a single Node.js process that stores everything (database, photos, backups)
 in one folder, `DATA_DIR`. Any host works as long as that folder is on a **persistent disk**.
@@ -61,18 +63,16 @@ Install `fonts-dejavu-core` so the photo watermark text renders.
 
 ## Backups (SRS §6)
 
-- A database snapshot is written to `DATA_DIR/backups` every day automatically (last 14 kept).
-- Photos must also be copied **off the server**. Simplest: a daily cron on the server
+- A JSON backup of the database is written to `DATA_DIR/backups` every day automatically (last 14 kept).
+- Photos are in `DATA_DIR/media` and must also be copied **off the server**. Simplest: a daily cron
 
 ```bash
-0 3 * * * cd /path/to/rkdalvi && npm run backup:full && rclone copy /data/backups remote:rkdalvi-backups
+0 3 * * * rclone copy /data remote:rkdalvi-backup
 ```
 
-  (rclone can copy to Google Drive, Backblaze B2, S3…). Most VPS providers also offer
-  automatic weekly disk snapshots for a small fee — turn that on too.
+  (rclone can copy to Google Drive, Backblaze B2, S3…). Also turn on your VPS provider's disk snapshots.
 
-**Restore:** stop the app, extract the `full-*.tar.gz` into `DATA_DIR`, rename the
-`db-*.sqlite` file inside to `rkdalvi.db`, start the app.
+**Restore:** `npm run restore -- /data/backups/db-YYYY-MM-DD.json` (and copy the `media` folder back).
 
 ## Email alerts
 

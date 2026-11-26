@@ -35,7 +35,7 @@
 | Ease of use: large buttons, < 2 min upload | ✅ | 48 px+ touch targets; client-side resize; test uploads 20 photos |
 | Language: English now, more later | ✅ | text kept in templates, ready for translation |
 | Device support: Android 8+, all modern browsers, phone/tablet/laptop | ✅ | responsive, TWA min SDK 21 |
-| Daily backup | ✅ DB automatic · ⚙️ off-site copy (see DEPLOY.md) | `src/backup.js` |
+| Daily backup | ✅ automatic (Vercel Cron → Blob, or server timer) | `src/backup.js`; photos in durable Blob storage on Vercel |
 | Privacy policy page | ✅ | `/privacy` |
 | SEO | ✅ | sitemap, robots, meta/OG, JSON-LD, clean URLs |
 

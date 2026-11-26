@@ -27,7 +27,7 @@
       <div class="progress"><span data-uq-bar></span></div>
       <ul data-uq-list></ul>
     </div>
-    <ul class="media-grid" data-media-grid data-project="<%= p.id %>" data-cover="<%= p.cover_media_id || '' %>">
+    <ul class="media-grid" data-media-grid data-project="<%= p.id %>" data-cover="<%= p.cover_media_id || '' %>" data-direct-video="<%= directVideo ? 1 : 0 %>">
       <% const firstPhoto = items.find(x => x.kind === 'photo'); items.forEach(m => { %><%- include('_media-item', { m, isCover: p.cover_media_id ? p.cover_media_id === m.id : (firstPhoto && firstPhoto.id === m.id) }) %><% }) %>
     </ul>
     <template id="media-item-tpl"><%- include('_media-item', { m: { id: 0, kind: 'photo', thumb: '', file: '', caption: '', tag: 'normal' }, isCover: false }) %></template>

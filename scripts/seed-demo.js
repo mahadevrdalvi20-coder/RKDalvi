@@ -3,14 +3,10 @@
 // site can be previewed before real photos are uploaded. Images are generated
 // placeholders. Delete the demo projects from the admin panel when going live.
 const sharp = require('sharp');
-const { db } = require('../src/db');
+const { db, ready } = require('../src/db');
 const util = require('../src/util');
 const { processProjectPhoto } = require('../src/media');
 
-if (db.prepare('SELECT COUNT(*) AS n FROM projects').get().n > 0) {
-  console.log('Projects already exist — demo data not added.');
-  process.exit(0);
-}
 
 const PALETTES = [
   ['#6b4226', '#c89b6d', '#f3e6d3'], ['#3d2b1f', '#a47148', '#e9d8c4'], ['#4e3b31', '#b5835a', '#efe1cf'],
@@ -58,34 +54,39 @@ const DEMO = [
 ];
 
 (async () => {
-  const cats = Object.fromEntries(db.prepare('SELECT slug, id FROM categories').all().map((c) => [c.slug, c.id]));
-  const svcs = Object.fromEntries(db.prepare('SELECT slug, id FROM services').all().map((c) => [c.slug, c.id]));
+  await ready;
+  if ((await db.one('SELECT COUNT(*) FROM projects')) > 0) {
+    console.log('Projects already exist — demo data not added.');
+    process.exit(0);
+  }
+  const cats = Object.fromEntries((await db.all('SELECT slug, id FROM categories')).map((c) => [c.slug, c.id]));
+  const svcs = Object.fromEntries((await db.all('SELECT slug, id FROM services')).map((c) => [c.slug, c.id]));
   for (const [idx, d] of DEMO.entries()) {
     const [title, cat, loc, year, services, materials, pieces, duration, desc] = d;
-    const info = db
-      .prepare(
-        `INSERT INTO projects (title, slug, category_id, location, year, description, materials, pieces, duration, featured, status, published_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', datetime('now', ?), datetime('now', ?))`
-      )
-      .run(title, util.uniqueSlug(db, 'projects', title), cats[cat], loc, year, desc, materials, pieces, duration, idx < 4 ? 1 : 0, `-${idx} days`, `-${idx} days`);
-    const pid = Number(info.lastInsertRowid);
-    for (const s of services) db.prepare('INSERT INTO project_services (project_id, service_id) VALUES (?, ?)').run(pid, svcs[s]);
+    const info = await db.run(
+      `INSERT INTO projects (title, slug, category_id, location, year, description, materials, pieces, duration, featured, status, published_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', datetime('now', ?), datetime('now', ?))`,
+      title, await util.uniqueSlug(db, 'projects', title), cats[cat], loc, year, desc, materials, pieces, duration, idx < 4 ? 1 : 0, `-${idx} days`, `-${idx} days`
+    );
+    const pid = info.lastInsertRowid;
+    for (const s of services) await db.run('INSERT INTO project_services (project_id, service_id) VALUES (?, ?)', pid, svcs[s]);
     const n = 5 + (idx % 3);
     for (let k = 0; k < n; k++) {
       const buf = await sharp(Buffer.from(roomSvg(idx + k, `Sample photo ${k + 1} — replace with real project photos`))).jpeg({ quality: 90 }).toBuffer();
       const r = await processProjectPhoto(buf, { watermark: k % 2 === 0, settings: { name: 'R. K. DALVI' } });
       const tag = idx === 0 && k === n - 2 ? 'before' : idx === 0 && k === n - 1 ? 'after' : 'normal';
-      db.prepare("INSERT INTO media (project_id, kind, file, medium, thumb, width, height, sort_order, bytes, tag, caption) VALUES (?, 'photo', ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+      await db.run(
+        "INSERT INTO media (project_id, kind, file, medium, thumb, width, height, sort_order, bytes, tag, caption) VALUES (?, 'photo', ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         pid, r.file, r.medium, r.thumb, r.width, r.height, k, r.bytes, tag, k === 0 ? 'Overview' : ''
       );
     }
     console.log('Added demo project:', title);
   }
-  const t = db.prepare('INSERT INTO testimonials (client_name, business, text, rating, sort_order) VALUES (?, ?, ?, ?, ?)');
-  t.run('Sample Client', 'Seaside Resort (sample)', 'The furniture quality is excellent and the team finished all rooms on schedule. Highly recommended for hotel projects.', 5, 0);
-  t.run('Sample Architect', 'Design Studio (sample)', 'Very good finishing and they follow drawings exactly. Easy to coordinate with on site.', 5, 1);
-  t.run('Sample Homeowner', 'Villa owner (sample)', 'Our kitchen and wardrobes look beautiful. Good material and fair pricing.', 4, 2);
-  const c = db.prepare('INSERT INTO clients (name, sort_order) VALUES (?, ?)');
-  ['Seaside Resort', 'Heritage Hotel', 'Coastal Café', 'TechPark Offices'].forEach((n, i) => c.run(n, i));
+  const T = 'INSERT INTO testimonials (client_name, business, text, rating, sort_order) VALUES (?, ?, ?, ?, ?)';
+  await db.run(T, 'Sample Client', 'Seaside Resort (sample)', 'The furniture quality is excellent and the team finished all rooms on schedule. Highly recommended for hotel projects.', 5, 0);
+  await db.run(T, 'Sample Architect', 'Design Studio (sample)', 'Very good finishing and they follow drawings exactly. Easy to coordinate with on site.', 5, 1);
+  await db.run(T, 'Sample Homeowner', 'Villa owner (sample)', 'Our kitchen and wardrobes look beautiful. Good material and fair pricing.', 4, 2);
+  for (const [i, n] of ['Seaside Resort', 'Heritage Hotel', 'Coastal Café', 'TechPark Offices'].entries()) await db.run('INSERT INTO clients (name, sort_order) VALUES (?, ?)', n, i);
   console.log('Demo data added. Replace with real projects from /admin.');
+  process.exit(0);
 })();

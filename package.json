@@ -8,10 +8,11 @@
     "dev": "node --watch server.js",
     "test": "node --test test/*.test.js",
     "backup": "node src/backup.js",
-    "backup:full": "node src/backup.js --full",
     "create-admin": "node scripts/create-admin.js",
     "seed:demo": "node scripts/seed-demo.js",
-    "icons": "node scripts/make-icons.js"
+    "icons": "node scripts/make-icons.js",
+    "build:client": "esbuild client/blob-upload.js --bundle --minify --format=iife --platform=browser --target=es2019 --outfile=public/js/blob-upload.js && node scripts/copy-vendor.js",
+    "restore": "node scripts/restore-backup.js"
   },
   "repository": {
     "type": "git",
@@ -26,6 +27,8 @@
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
     "@fontsource/playfair-display": "^5.3.0",
+    "@libsql/client": "^0.18.0",
+    "@vercel/blob": "^2.9.0",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.2",
     "ejs": "^7.0.2",
@@ -41,5 +44,11 @@
   "private": true,
   "engines": {
     "node": ">=22.13"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "overrides": {
+    "zod": "^4.6.6"
   }
 }

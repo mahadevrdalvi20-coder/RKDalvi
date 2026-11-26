@@ -48,7 +48,8 @@ See [docs/REQUIREMENTS-MAP.md](docs/REQUIREMENTS-MAP.md) for a line-by-line mapp
 
 ## Quick start (on a computer)
 
-Requires **Node.js 22.13+**.
+Requires **Node.js 22.13+**. Locally the database is a file in `data/` and photos are saved in
+`data/media/` — no accounts needed.
 
 ```bash
 npm install
@@ -73,19 +74,25 @@ npm test
 
 ## Going live
 
-See [docs/DEPLOY.md](docs/DEPLOY.md) — one small server or a managed host with a
-persistent disk is enough (approx. ₹500–1,000 / month). Then follow
+- **Vercel** (recommended for this repo): see [docs/VERCEL.md](docs/VERCEL.md) — uses Turso for the
+  database and Vercel Blob for photos.
+- **Own server / Docker**: see [docs/DEPLOY.md](docs/DEPLOY.md) — everything is stored on the server's disk.
+
+Then follow
 [docs/ANDROID.md](docs/ANDROID.md) to publish the Play Store app, and give the owner
 [docs/OWNER-GUIDE.md](docs/OWNER-GUIDE.md).
 
 ## Project layout
 
 ```
-server.js               start-up, cleanup timers, daily backups
+server.js               start-up for own server (cleanup + daily backups)
+api/index.js            Vercel serverless entry (vercel.json routes everything here)
 src/app.js              Express app, security headers, static files, visit stats
 src/routes/public.js    website pages, enquiry form, sitemap, manifest
 src/routes/admin.js     admin panel, upload API, enquiries, settings
-src/db.js               SQLite schema + default content
+src/db.js               libSQL / Turso database, schema + default content
+src/storage.js          file storage: Vercel Blob or local disk
+src/backup.js           daily cleanup + JSON backups (Vercel Cron or server timer)
 src/media.js            photo compression, thumbnails, watermark, videos
 src/notify.js           email, push notifications, SMS (OTP)
 src/auth.js             sessions, CSRF, password reset, OTP
@@ -101,6 +108,7 @@ test/                   automated tests
 | Command | What it does |
 |---|---|
 | `npm run create-admin -- --email a@b.com --name "Name" --password "pass1234"` | Create an admin or reset a forgotten password from the server |
-| `npm run backup` | Database snapshot now (also runs automatically every day) |
-| `npm run backup:full` | Database + all photos/videos + attachments as one `.tar.gz` |
+| `npm run backup` | Save a JSON backup of the database now (also runs automatically every day) |
+| `npm run restore -- <file or URL>` | Restore a JSON backup (overwrites the database) |
+| `npm run build:client` | Rebuild the browser upload helper and copy vendor files into `public/` |
 | `npm run icons` | Regenerate app icons |

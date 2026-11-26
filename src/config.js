@@ -3,7 +3,9 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const env = process.env;
-const DATA_DIR = path.resolve(env.DATA_DIR || path.join(root, 'data'));
+const isVercel = Boolean(env.VERCEL);
+// On Vercel only /tmp is writable (and temporary) — real data lives in Turso + Vercel Blob.
+const DATA_DIR = path.resolve(env.DATA_DIR || (isVercel ? '/tmp/rkdalvi' : path.join(root, 'data')));
 
 function int(v, d) {
   const n = parseInt(v, 10);
@@ -13,11 +15,17 @@ function int(v, d) {
 const config = {
   root,
   env: env.NODE_ENV || 'development',
-  isProd: env.NODE_ENV === 'production',
+  isVercel,
+  isProd: env.NODE_ENV === 'production' || isVercel,
   port: int(env.PORT, 3000),
   // Public URL of the site, used in share links, sitemap, emails.
-  baseUrl: (env.BASE_URL || `http://localhost:${int(env.PORT, 3000)}`).replace(/\/$/, ''),
-  trustProxy: env.TRUST_PROXY === '1' || env.TRUST_PROXY === 'true',
+  baseUrl: (
+    env.BASE_URL ||
+    (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : '') ||
+    (env.VERCEL_URL ? `https://${env.VERCEL_URL}` : '') ||
+    `http://localhost:${int(env.PORT, 3000)}`
+  ).replace(/\/$/, ''),
+  trustProxy: isVercel || env.TRUST_PROXY === '1' || env.TRUST_PROXY === 'true',
 
   dataDir: DATA_DIR,
   dbFile: path.join(DATA_DIR, 'rkdalvi.db'),
@@ -31,6 +39,9 @@ const config = {
 
   maxVideoMB: int(env.MAX_VIDEO_MB, 50),
   maxImageMB: int(env.MAX_IMAGE_MB, 25),
+  // Vercel Blob: photos, videos and attachments. Without a token, files go to DATA_DIR/media.
+  blobToken: env.BLOB_READ_WRITE_TOKEN || '',
+  cronSecret: env.CRON_SECRET || '',
 
   smtp: {
     host: env.SMTP_HOST || '',
@@ -68,6 +79,9 @@ const config = {
 
 config.smsEnabled = Boolean(config.twilio.sid && config.twilio.token && config.twilio.from);
 config.otpEnabled = config.smsEnabled || !config.isProd;
+config.useBlob = Boolean(config.blobToken);
+// Vercel rejects request bodies over 4.5 MB
+config.maxBodyMB = isVercel ? 4.4 : 100;
 config.pushEnabled = Boolean(config.vapid.publicKey && config.vapid.privateKey);
 
 module.exports = config;

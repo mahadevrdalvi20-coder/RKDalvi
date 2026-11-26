@@ -36,24 +36,24 @@ async function sendMail({ to, subject, text, html }) {
 }
 
 // VAPID keys: from env, otherwise generated once and stored in settings so push works out of the box.
-function vapidKeys() {
+async function vapidKeys() {
   if (config.vapid.publicKey && config.vapid.privateKey) return config.vapid;
-  const s = getSettings();
+  const s = await getSettings();
   if (s.vapid_public && s.vapid_private) return { publicKey: s.vapid_public, privateKey: s.vapid_private, subject: config.vapid.subject };
   const k = webpush.generateVAPIDKeys();
-  setSetting('vapid_public', k.publicKey);
-  setSetting('vapid_private', k.privateKey);
+  await setSetting('vapid_public', k.publicKey);
+  await setSetting('vapid_private', k.privateKey);
   return { publicKey: k.publicKey, privateKey: k.privateKey, subject: config.vapid.subject };
 }
 
-function pushPublicKey() {
-  return vapidKeys().publicKey;
+async function pushPublicKey() {
+  return (await vapidKeys()).publicKey;
 }
 
 async function sendPushToAdmins(payload) {
-  const subs = db.prepare('SELECT ps.* FROM push_subscriptions ps JOIN admins a ON a.id = ps.admin_id WHERE a.active = 1').all();
+  const subs = await db.all('SELECT ps.* FROM push_subscriptions ps JOIN admins a ON a.id = ps.admin_id WHERE a.active = 1');
   if (!subs.length) return 0;
-  const k = vapidKeys();
+  const k = await vapidKeys();
   webpush.setVapidDetails(k.subject, k.publicKey, k.privateKey);
   let sent = 0;
   await Promise.all(
@@ -62,7 +62,7 @@ async function sendPushToAdmins(payload) {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(payload), { TTL: 86400 });
         sent += 1;
       } catch (e) {
-        if (e.statusCode === 404 || e.statusCode === 410) db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(s.endpoint);
+        if (e.statusCode === 404 || e.statusCode === 410) await db.run('DELETE FROM push_subscriptions WHERE endpoint = ?', s.endpoint);
         else console.error('[push] failed:', e.statusCode || e.message);
       }
     })
@@ -71,7 +71,7 @@ async function sendPushToAdmins(payload) {
 }
 
 async function notifyNewEnquiry(enq) {
-  const s = getSettings();
+  const s = await getSettings();
   const url = `${config.baseUrl}/admin/enquiries/${enq.id}`;
   const lines = [
     `New enquiry #${enq.id} from the website / app`,
@@ -91,10 +91,7 @@ async function notifyNewEnquiry(enq) {
     `WhatsApp them: ${waLink(enq.mobile, `Hello ${enq.name}, this is ${s.name}. Thank you for your enquiry.`)}`,
   ].filter((l) => l !== null);
 
-  const adminEmails = db
-    .prepare('SELECT email FROM admins WHERE active = 1 AND notify_email = 1 AND email IS NOT NULL')
-    .all()
-    .map((r) => r.email);
+  const adminEmails = (await db.all('SELECT email FROM admins WHERE active = 1 AND notify_email = 1 AND email IS NOT NULL')).map((r) => r.email);
   const to = [...new Set([...config.notifyEmails, ...adminEmails])];
 
   await Promise.allSettled([

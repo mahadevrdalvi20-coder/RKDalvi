@@ -11,7 +11,7 @@ const PROJECT_FROM = `FROM projects p
   LEFT JOIN media m ON m.id = COALESCE(p.cover_media_id,
      (SELECT id FROM media x WHERE x.project_id = p.id AND x.kind = 'photo' ORDER BY x.sort_order, x.id LIMIT 1))`;
 
-function listProjects({ status = 'published', category, service, q, featured, limit = 200, offset = 0, sort = 'newest' } = {}) {
+async function listProjects({ status = 'published', category, service, q, featured, limit = 200, offset = 0, sort = 'newest' } = {}) {
   const where = [];
   const params = [];
   if (status && status !== 'all') {
@@ -41,56 +41,50 @@ function listProjects({ status = 'published', category, service, q, featured, li
           ? 'p.updated_at DESC'
           : 'COALESCE(p.published_at, p.created_at) DESC, p.id DESC';
   const sql = `SELECT ${PROJECT_COLS} ${PROJECT_FROM} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${order} LIMIT ? OFFSET ?`;
-  return db.prepare(sql).all(...params, limit, offset);
+  return db.all(sql, ...params, limit, offset);
 }
 
 function getProject(by, value) {
   const col = by === 'slug' ? 'p.slug' : 'p.id';
-  return db.prepare(`SELECT ${PROJECT_COLS} ${PROJECT_FROM} WHERE ${col} = ?`).get(value);
+  return db.get(`SELECT ${PROJECT_COLS} ${PROJECT_FROM} WHERE ${col} = ?`, value);
 }
 
 function projectMedia(projectId) {
-  return db.prepare('SELECT * FROM media WHERE project_id = ? ORDER BY sort_order, id').all(projectId);
+  return db.all('SELECT * FROM media WHERE project_id = ? ORDER BY sort_order, id', projectId);
 }
 
 function projectServices(projectId) {
-  return db
-    .prepare('SELECT s.* FROM services s JOIN project_services ps ON ps.service_id = s.id WHERE ps.project_id = ? ORDER BY s.sort_order')
-    .all(projectId);
+  return db.all('SELECT s.* FROM services s JOIN project_services ps ON ps.service_id = s.id WHERE ps.project_id = ? ORDER BY s.sort_order', projectId);
 }
 
 function categories() {
-  return db.prepare('SELECT c.*, (SELECT COUNT(*) FROM projects p WHERE p.category_id = c.id AND p.status = \'published\') AS project_count FROM categories c ORDER BY sort_order, id').all();
+  return db.all("SELECT c.*, (SELECT COUNT(*) FROM projects p WHERE p.category_id = c.id AND p.status = 'published') AS project_count FROM categories c ORDER BY sort_order, id");
 }
 
 function services() {
-  return db
-    .prepare(
-      `SELECT s.*, (SELECT COUNT(*) FROM project_services ps JOIN projects p ON p.id = ps.project_id WHERE ps.service_id = s.id AND p.status = 'published') AS project_count
-       FROM services s ORDER BY sort_order, id`
-    )
-    .all();
+  return db.all(`SELECT s.*, (SELECT COUNT(*) FROM project_services ps JOIN projects p ON p.id = ps.project_id WHERE ps.service_id = s.id AND p.status = 'published') AS project_count
+       FROM services s ORDER BY sort_order, id`);
 }
 
 function testimonials(all = false) {
-  return db.prepare(`SELECT * FROM testimonials ${all ? '' : 'WHERE visible = 1'} ORDER BY sort_order, id`).all();
+  return db.all(`SELECT * FROM testimonials ${all ? '' : 'WHERE visible = 1'} ORDER BY sort_order, id`);
 }
 
 function clients() {
-  return db.prepare('SELECT * FROM clients ORDER BY sort_order, id').all();
+  return db.all('SELECT * FROM clients ORDER BY sort_order, id');
 }
 
 function team() {
-  return db.prepare('SELECT * FROM team ORDER BY sort_order, id').all();
+  return db.all('SELECT * FROM team ORDER BY sort_order, id');
 }
 
 function sitePhotos(grp) {
-  return db.prepare('SELECT * FROM site_photos WHERE grp = ? ORDER BY sort_order, id').all(grp);
+  return db.all('SELECT * FROM site_photos WHERE grp = ? ORDER BY sort_order, id', grp);
 }
 
-function recordVisit(kind) {
+async function recordVisit(kind) {
   const day = new Date().toISOString().slice(0, 10);
-  db.prepare('INSERT INTO visits (day, kind, count) VALUES (?, ?, 1) ON CONFLICT(day, kind) DO UPDATE SET count = count + 1').run(day, kind);
+  await db.run('INSERT INTO visits (day, kind, count) VALUES (?, ?, 1) ON CONFLICT(day, kind) DO UPDATE SET count = count + 1', day, kind);
 }
 
 module.exports = { listProjects, getProject, projectMedia, projectServices, categories, services, testimonials, clients, team, sitePhotos, recordVisit };

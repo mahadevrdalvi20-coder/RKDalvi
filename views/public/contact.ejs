@@ -17,7 +17,7 @@
 
 <section class="section section-top0">
   <div class="wrap contact-grid">
-    <form class="card form enquiry-form" method="post" action="/contact" enctype="multipart/form-data" novalidate>
+    <form class="card form enquiry-form" method="post" action="/contact" enctype="multipart/form-data" novalidate data-max-total="<%= Math.floor(maxBodyMB * 1024 * 1024) %>">
       <h2 class="h3">Enquiry form</h2>
       <% if (errors.form) { %><div class="alert alert-error"><%= errors.form %></div><% } else if (Object.keys(errors).length) { %><div class="alert alert-error" role="alert">Please check the highlighted fields.</div><% } %>
       <% if (project) { %>
@@ -88,7 +88,7 @@
         <div class="field">
           <label for="f-files">Reference photos / drawings <span class="opt">(up to 5, optional)</span></label>
           <input id="f-files" name="attachments" type="file" accept="image/*,application/pdf" multiple data-max-files="5" <%- inv('attachments') %>>
-          <p class="hint" data-file-hint>JPG, PNG or PDF · max 10 MB each</p>
+          <p class="hint" data-file-hint>JPG, PNG or PDF · photos are compressed automatically<%= maxBodyMB < 10 ? ` · ${Math.floor(maxBodyMB)} MB in total` : ' · max 10 MB each' %></p>
           <%- err('attachments') %>
         </div>
       </div>

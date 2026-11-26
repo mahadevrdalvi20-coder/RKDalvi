@@ -1,21 +1,56 @@
 'use strict';
-// Suppress the one-time "SQLite is experimental" warning; node:sqlite is stable enough for this use.
-const origEmit = process.emitWarning;
-process.emitWarning = function (w, ...args) {
-  if (String(w && w.message ? w.message : w).includes('SQLite')) return;
-  return origEmit.call(this, w, ...args);
-};
-const { DatabaseSync } = require('node:sqlite');
-process.emitWarning = origEmit;
+// Database access. Uses libSQL: a local SQLite file in development, or a hosted
+// Turso database in production (set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN, which
+// the Vercel Turso integration does automatically). All calls are async.
 const fs = require('fs');
 const config = require('./config');
 
-fs.mkdirSync(config.dataDir, { recursive: true });
-fs.mkdirSync(config.mediaDir, { recursive: true });
-fs.mkdirSync(config.privateDir, { recursive: true });
+const remoteUrl = process.env.TURSO_DATABASE_URL || process.env.LIBSQL_URL || '';
+// Hosted database: pure-JS HTTP client (no native module needed on serverless). Local file: native client.
+const { createClient } = remoteUrl ? require('@libsql/client/web') : require('@libsql/client');
+if (!remoteUrl) fs.mkdirSync(config.dataDir, { recursive: true });
+if (config.isVercel && !remoteUrl) {
+  console.error('[db] TURSO_DATABASE_URL is not set — data will NOT be saved permanently on Vercel.');
+}
+const client = createClient({
+  url: remoteUrl || `file:${config.dbFile}`,
+  authToken: process.env.TURSO_AUTH_TOKEN || process.env.LIBSQL_AUTH_TOKEN || undefined,
+});
 
-const db = new DatabaseSync(config.dbFile);
-db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
+const plain = (r) => r.rows.map((row) => {
+  const o = {};
+  r.columns.forEach((c, i) => { o[c] = row[i]; });
+  return o;
+});
+const norm = (args) => args.map((a) => (a === undefined ? null : typeof a === 'boolean' ? (a ? 1 : 0) : a));
+
+const db = {
+  client,
+  async all(sql, ...args) {
+    await ready;
+    return plain(await client.execute({ sql, args: norm(args) }));
+  },
+  async get(sql, ...args) {
+    return (await db.all(sql, ...args))[0];
+  },
+  async one(sql, ...args) {
+    // first column of first row (for COUNT(*) etc.)
+    const r = await db.get(sql, ...args);
+    return r ? Object.values(r)[0] : undefined;
+  },
+  async run(sql, ...args) {
+    await ready;
+    const r = await client.execute({ sql, args: norm(args) });
+    return { changes: r.rowsAffected, lastInsertRowid: r.lastInsertRowid != null ? Number(r.lastInsertRowid) : null };
+  },
+  // Atomic group of writes: [[sql, ...args], ...]
+  async batch(stmts) {
+    await ready;
+    const list = stmts.filter(Boolean).map(([sql, ...args]) => ({ sql, args: norm(args) }));
+    if (!list.length) return [];
+    return client.batch(list, 'write');
+  },
+};
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS settings (
@@ -53,6 +88,11 @@ CREATE TABLE IF NOT EXISTS otps (
   code_hash TEXT NOT NULL,
   expires INTEGER NOT NULL,
   attempts INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL DEFAULT 0,
+  expires INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -191,7 +231,6 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `;
-db.exec(SCHEMA);
 
 const DEFAULT_SETTINGS = {
   name: 'R. K. DALVI',
@@ -262,53 +301,58 @@ const DEFAULT_SERVICES = [
   ['Turnkey Interiors', 'turnkey-interiors', 'key', 'Complete design-to-handover interiors: civil, electrical, furniture, décor and finishing under one contract.'],
 ];
 
-function seedDefaults() {
-  const ins = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
-  for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) ins.run(k, v);
-  const catCount = db.prepare('SELECT COUNT(*) AS n FROM categories').get().n;
-  if (!catCount) {
-    const ic = db.prepare('INSERT INTO categories (name, slug, sort_order) VALUES (?, ?, ?)');
-    DEFAULT_CATEGORIES.forEach(([n, s], i) => ic.run(n, s, i));
+
+async function init() {
+  if (!remoteUrl) await client.execute('PRAGMA journal_mode = WAL');
+  await client.execute('PRAGMA foreign_keys = ON').catch(() => {});
+  await client.executeMultiple(SCHEMA);
+  await client.batch(
+    Object.entries(DEFAULT_SETTINGS).map(([k, v]) => ({ sql: 'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', args: [k, v] })),
+    'write'
+  );
+  const cats = (await client.execute('SELECT COUNT(*) AS n FROM categories')).rows[0].n;
+  if (!Number(cats)) {
+    await client.batch(DEFAULT_CATEGORIES.map(([n, s], i) => ({ sql: 'INSERT INTO categories (name, slug, sort_order) VALUES (?, ?, ?)', args: [n, s, i] })), 'write');
   }
-  const svcCount = db.prepare('SELECT COUNT(*) AS n FROM services').get().n;
-  if (!svcCount) {
-    const is = db.prepare('INSERT INTO services (name, slug, icon, description, sort_order) VALUES (?, ?, ?, ?, ?)');
-    DEFAULT_SERVICES.forEach(([n, s, icon, d], i) => is.run(n, s, icon, d, i));
+  const svcs = (await client.execute('SELECT COUNT(*) AS n FROM services')).rows[0].n;
+  if (!Number(svcs)) {
+    await client.batch(
+      DEFAULT_SERVICES.map(([n, s, icon, d], i) => ({ sql: 'INSERT INTO services (name, slug, icon, description, sort_order) VALUES (?, ?, ?, ?, ?)', args: [n, s, icon, d, i] })),
+      'write'
+    );
   }
 }
-seedDefaults();
+const ready = init();
+ready.catch((e) => console.error('[db] initialisation failed:', e.message));
 
-function tx(fn) {
-  db.exec('BEGIN');
+function parseJson(v, d) {
   try {
-    const r = fn();
-    db.exec('COMMIT');
-    return r;
-  } catch (e) {
-    db.exec('ROLLBACK');
-    throw e;
+    return JSON.parse(v || '');
+  } catch {
+    return d;
   }
 }
 
-function getSettings() {
-  const rows = db.prepare('SELECT key, value FROM settings').all();
+async function getSettings() {
+  const rows = await db.all('SELECT key, value FROM settings');
   const s = {};
   for (const r of rows) s[r.key] = r.value;
-  const parse = (k, d) => {
-    try {
-      return JSON.parse(s[k] || '');
-    } catch {
-      return d;
-    }
-  };
-  s.highlightsList = parse('highlights', []);
-  s.budgetRanges = parse('budget_ranges', []);
-  s.clientTypes = parse('client_types', []);
+  s.highlightsList = parseJson(s.highlights, []);
+  s.budgetRanges = parseJson(s.budget_ranges, []);
+  s.clientTypes = parseJson(s.client_types, []);
   return s;
 }
 
 function setSetting(key, value) {
-  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
+  return db.run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', key, value);
 }
 
-module.exports = { db, tx, getSettings, setSetting };
+async function close() {
+  try {
+    client.close();
+  } catch {
+    /* ignore */
+  }
+}
+
+module.exports = { db, ready, getSettings, setSetting, close };

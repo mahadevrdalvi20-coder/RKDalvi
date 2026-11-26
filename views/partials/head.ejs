@@ -16,7 +16,7 @@
 <meta property="og:title" content="<%= fullTitle %>">
 <meta property="og:description" content="<%= description || s.seo_description %>">
 <meta property="og:url" content="<%= canonical %>">
-<% if (ogImage) { %><meta property="og:image" content="<%= baseUrl + ogImage %>"><meta name="twitter:card" content="summary_large_image"><% } %>
+<% const ogAbs = ogImage ? (/^https?:/.test(ogImage) ? ogImage : baseUrl + ogImage) : ''; %><% if (ogAbs) { %><meta property="og:image" content="<%= ogAbs %>"><meta name="twitter:card" content="summary_large_image"><% } %>
 <link rel="preload" href="/fonts/playfair/playfair-display-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/inter/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/css/site.css">
@@ -24,7 +24,7 @@
 <% if (config.gaMeasurementId) { %><script async src="https://www.googletagmanager.com/gtag/js?id=<%= config.gaMeasurementId %>"></script><script src="/assets/js/ga.js" data-id="<%= config.gaMeasurementId %>" id="ga-init"></script><% } %>
 <script type="application/ld+json"><%- JSON.stringify({
   '@context': 'https://schema.org', '@type': 'HomeAndConstructionBusiness', name: s.name, description: s.seo_description,
-  url: baseUrl, telephone: s.phone, email: s.email, address: s.address, image: ogImage ? baseUrl + ogImage : undefined,
+  url: baseUrl, telephone: s.phone, email: s.email, address: s.address, image: ogAbs || undefined,
   areaServed: s.seo_city || undefined, openingHours: undefined,
   sameAs: [s.instagram, s.facebook, s.google_business, s.youtube].filter(Boolean)
 }).replace(/</g, '\\u003c') %></script>

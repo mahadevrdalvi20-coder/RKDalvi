@@ -11,7 +11,8 @@
   var retryAll = document.querySelector('[data-retry-all]');
   var wm = document.querySelector('[data-watermark]');
   var countEl = document.querySelector('[data-media-count]');
-  var MAX_SIDE = 2560, CONCURRENCY = 3, MAX_TRIES = 4;
+  var MAX_SIDE = 2560, CONCURRENCY = 3, MAX_TRIES = 4, MAX_UPLOAD = 4 * 1024 * 1024; // hosting limit per request
+  var directVideo = grid.dataset.directVideo === '1';
   var queue = [], active = 0;
 
   function updateCount() { if (countEl) countEl.textContent = grid.children.length + ' items'; }
@@ -74,19 +75,33 @@
     if (queue.some(function (q) { return ['waiting', 'uploading', 'preparing', 'retrying'].indexOf(q.state) >= 0; })) { e.preventDefault(); e.returnValue = ''; }
   });
 
-  // Resize big photos on the phone before upload: much faster on mobile data.
+  // Resize big photos on the phone before upload: much faster on mobile data,
+  // and keeps each request under the hosting size limit.
+  function encode(bmp, maxSide, q) {
+    var scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    var c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+    var ctx = c.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    return new Promise(function (res) { c.toBlob(res, 'image/jpeg', q); });
+  }
   function prepareImage(file) {
     if (!/^image\/(jpeg|png|webp)$/.test(file.type) || !window.createImageBitmap) return Promise.resolve(file);
     return createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bmp) {
-      var scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
-      if (scale === 1 && file.size < 3 * 1024 * 1024) { bmp.close && bmp.close(); return file; }
-      var c = document.createElement('canvas');
-      c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
-      var ctx = c.getContext('2d');
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(bmp, 0, 0, c.width, c.height);
-      bmp.close && bmp.close();
-      return new Promise(function (res) { c.toBlob(function (b) { res(b && b.size < file.size ? new File([b], (file.name || 'photo').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file); }, 'image/jpeg', 0.92); });
+      if (Math.max(bmp.width, bmp.height) <= MAX_SIDE && file.size < 3 * 1024 * 1024) { bmp.close && bmp.close(); return file; }
+      var tries = [[MAX_SIDE, 0.9], [MAX_SIDE, 0.8], [2048, 0.8], [1800, 0.75]];
+      var step = function (i) {
+        return encode(bmp, tries[i][0], tries[i][1]).then(function (b) {
+          if (b && b.size <= MAX_UPLOAD) return b;
+          if (i + 1 < tries.length) return step(i + 1);
+          return b;
+        });
+      };
+      return step(0).then(function (b) {
+        bmp.close && bmp.close();
+        return b ? new File([b], (file.name || 'photo').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file;
+      });
     }).catch(function () { return file; });
   }
 
@@ -118,6 +133,7 @@
     var prep = isVideo ? videoPoster(f).then(function (p) { return { file: f, poster: p }; }) : prepareImage(f).then(function (x) { return { file: x }; });
     return prep.then(function (p) {
       item.total = p.file.size;
+      if (isVideo && directVideo) return attemptDirect(item, p);
       return attempt(item, p);
     });
   }
@@ -153,11 +169,60 @@
           resolve();
         } else if (xhr.status === 401) {
           fail('Session ended — log in again in a new tab, then tap Retry.', false);
+        } else if (xhr.status === 413) {
+          fail('File too large for upload', false);
         } else fail(j.error || 'Upload failed (' + xhr.status + ')', xhr.status >= 500 || xhr.status === 0);
       };
       xhr.onerror = function () { fail('No internet connection', true); };
       xhr.ontimeout = function () { fail('Upload timed out', true); };
       xhr.send(fd);
+    });
+  }
+
+  // Videos: upload straight to cloud storage (no size limit from the hosting), then register.
+  var blobLib = null;
+  function loadBlobLib() {
+    if (blobLib) return blobLib;
+    blobLib = new Promise(function (resolve, reject) {
+      var sc = document.createElement('script');
+      sc.src = '/assets/js/blob-upload.js';
+      sc.onload = function () { resolve(window.RKDBlob); };
+      sc.onerror = function () { blobLib = null; reject(new Error('Could not load uploader')); };
+      document.head.appendChild(sc);
+    });
+    return blobLib;
+  }
+  function attemptDirect(item, p) {
+    item.tries++;
+    setState(item, 'uploading', 'Uploading video…');
+    var ext = ({ 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/3gpp': '3gp' })[p.file.type] || 'mp4';
+    var d = new Date();
+    var pathname = 'media/' + d.getUTCFullYear() + '/' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '/video-' + Date.now().toString(36) + '.' + ext;
+    return loadBlobLib().then(function (lib) {
+      return lib.upload(pathname, p.file, {
+        access: 'public',
+        contentType: p.file.type,
+        handleUploadUrl: '/admin/api/blob-upload',
+        headers: { 'X-CSRF-Token': RKD.csrf },
+        multipart: p.file.size > 8 * 1024 * 1024,
+        onUploadProgress: function (e) { item.loaded = e.loaded; item.el.querySelector('.uq-p span').style.width = Math.round(e.percentage) + '%'; refresh(); },
+      });
+    }).then(function (blob) {
+      var fd = new FormData();
+      fd.append('url', blob.url);
+      fd.append('size', String(p.file.size));
+      if (p.poster) fd.append('poster', p.poster, 'poster.jpg');
+      return fetch('/admin/api/projects/' + projectId + '/video', { method: 'POST', body: fd, headers: { 'X-CSRF-Token': RKD.csrf, Accept: 'application/json' }, credentials: 'same-origin' })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not save video'); return j; }); });
+    }).then(function (j) {
+      addMediaItem(j.media);
+      setState(item, 'done', 'Done');
+    }).catch(function (err) {
+      if (item.tries < MAX_TRIES && !/size|type|Invalid/i.test(err.message)) {
+        setState(item, 'retrying', 'Problem uploading — retrying…');
+        return new Promise(function (r) { setTimeout(r, Math.pow(2, item.tries) * 1000); }).then(function () { return attemptDirect(item, p); });
+      }
+      setState(item, 'failed', err.message || 'Upload failed');
     });
   }
 
@@ -168,11 +233,11 @@
     var img = node.querySelector('img');
     if (m.kind === 'video') {
       var holder = node.querySelector('.mi-img');
-      if (m.thumb) img.src = '/media/' + m.thumb; else img.replaceWith(Object.assign(document.createElement('div'), { className: 'mi-vid' }));
+      if (m.thumbUrl) img.src = m.thumbUrl; else img.replaceWith(Object.assign(document.createElement('div'), { className: 'mi-vid' }));
       var play = document.createElement('span'); play.className = 'mi-play'; play.innerHTML = '&#9654;'; holder.appendChild(play);
       node.querySelector('.mi-tag').hidden = true;
       node.querySelector('.mi-cover').hidden = true;
-    } else img.src = '/media/' + m.thumb;
+    } else img.src = m.thumbUrl;
     grid.appendChild(node);
     if (!grid.dataset.cover && !grid.querySelector('.is-cover') && m.kind === 'photo') node.classList.add('is-cover');
     updateCount();

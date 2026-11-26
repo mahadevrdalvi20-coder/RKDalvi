@@ -11,17 +11,19 @@ process.env.NODE_ENV = 'test';
 
 const sharp = require('sharp');
 const { createApp } = require('../src/app');
-const { db } = require('../src/db');
+const { db, ready } = require('../src/db');
 const notify = require('../src/notify');
 
 let server, base;
 before(async () => {
+  await ready;
   server = createApp().listen(0);
   await new Promise((r) => server.once('listening', r));
   base = `http://127.0.0.1:${server.address().port}`;
 });
-after(() => {
+after(async () => {
   server.close();
+  await require('../src/db').close();
   fs.rmSync(dataDir, { recursive: true, force: true });
 });
 
@@ -104,7 +106,7 @@ test('owner creates a project, uploads 20 photos and publishes it', async () => 
 
   // publishing without photos is blocked
   await owner.form(`/admin/projects/${projectId}`, { _csrf: csrf, title: 'Ocean View Hotel', action: 'publish' });
-  assert.equal(db.prepare('SELECT status FROM projects WHERE id = ?').get(projectId).status, 'draft');
+  assert.equal((await db.get('SELECT status FROM projects WHERE id = ?', projectId)).status, 'draft');
 
   const t0 = Date.now();
   const img = await sharp({ create: { width: 3000, height: 2000, channels: 3, background: '#8a5a3a' } }).jpeg().toBuffer();
@@ -116,18 +118,18 @@ test('owner creates a project, uploads 20 photos and publishes it', async () => 
       assert.equal(up.status, 200, up.text_);
     })
   );
-  const cat = db.prepare("SELECT id FROM categories WHERE slug = 'hotels-resorts'").get().id;
+  const cat = (await db.get("SELECT id FROM categories WHERE slug = 'hotels-resorts'")).id;
   const pub = await owner.form(`/admin/projects/${projectId}`, {
     _csrf: csrf, title: 'Ocean View Hotel', category_id: cat, location: 'Calangute, Goa', year: '2025', client_name: 'Secret Client', description: 'Rooms and lobby', materials: 'Teak, Veneer', action: 'publish',
   });
   assert.equal(pub.status, 302);
-  const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId);
+  const p = (await db.get('SELECT * FROM projects WHERE id = ?', projectId));
   assert.equal(p.status, 'published');
   projectSlug = p.slug;
   const editor = await owner.req(`/admin/projects/${projectId}`);
   assert.equal(editor.status, 200);
   assert.equal((editor.text_.match(/class="mi /g) || []).length, 21); // 20 items + template
-  const photos = db.prepare("SELECT * FROM media WHERE project_id = ? AND kind = 'photo'").all(projectId);
+  const photos = (await db.all("SELECT * FROM media WHERE project_id = ? AND kind = 'photo'", projectId));
   assert.equal(photos.length, 20);
   assert.ok(Date.now() - t0 < 120000, 'upload + publish under 2 minutes');
   // full image is resized to <= 2560 and thumbnails exist
@@ -176,7 +178,7 @@ test('enquiry form validates, stores, alerts and shows in admin only', async () 
   const ok = await v.req('/contact', { method: 'POST', body: fd });
   assert.equal(ok.status, 303);
   assert.match(ok.headers.get('location'), /^\/thank-you/);
-  const e = db.prepare('SELECT * FROM enquiries ORDER BY id DESC').get();
+  const e = (await db.get('SELECT * FROM enquiries ORDER BY id DESC'));
   assert.equal(e.mobile, '9820012345');
   assert.equal(e.project_id, projectId);
   await sleep(100);
@@ -194,7 +196,7 @@ test('enquiry form validates, stores, alerts and shows in admin only', async () 
 
   await owner.form(`/admin/enquiries/${e.id}/status`, { _csrf: csrf, status: 'site_visit' });
   await owner.form(`/admin/enquiries/${e.id}/notes`, { _csrf: csrf, body: 'Visit on Monday' });
-  assert.equal(db.prepare('SELECT status FROM enquiries WHERE id = ?').get(e.id).status, 'site_visit');
+  assert.equal((await db.get('SELECT status FROM enquiries WHERE id = ?', e.id)).status, 'site_visit');
   const csv = await owner.req('/admin/enquiries.csv');
   assert.match(csv.headers.get('content-type'), /text\/csv/);
   assert.match(csv.text_, /Priya Naik/);
@@ -204,11 +206,11 @@ test('enquiry form validates, stores, alerts and shows in admin only', async () 
 test('honeypot spam is silently dropped', async () => {
   const v = client();
   const page = await v.req('/contact');
-  const n = db.prepare('SELECT COUNT(*) AS n FROM enquiries').get().n;
+  const n = (await db.get('SELECT COUNT(*) AS n FROM enquiries')).n;
   await sleep(2700);
   const r = await v.form('/contact', { stamp: stampOf(page.text_), website: 'http://spam', name: 'Bot', mobile: '9876543210', client_type: 'Other', service: 'x', city: 'y' });
   assert.equal(r.status, 303);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM enquiries').get().n, n);
+  assert.equal((await db.get('SELECT COUNT(*) AS n FROM enquiries')).n, n);
 });
 
 test('second admin can be added and removed by the owner', async () => {
@@ -216,7 +218,7 @@ test('second admin can be added and removed by the owner', async () => {
   const m = client();
   assert.equal((await m.form('/admin/login', { email: 'mgr@example.com', password: 'manager-pass' })).status, 302);
   assert.equal((await m.req('/admin')).status, 200);
-  const id = db.prepare("SELECT id FROM admins WHERE email = 'mgr@example.com'").get().id;
+  const id = (await db.get("SELECT id FROM admins WHERE email = 'mgr@example.com'")).id;
   await owner.form(`/admin/settings/admins/${id}`, { _csrf: csrf, action: 'remove' });
   assert.equal((await m.req('/admin')).status, 302, 'removed admin is logged out');
 });
@@ -235,9 +237,28 @@ test('deleting a project removes its photos from disk', async () => {
   const c = client();
   await c.form('/admin/login', { email: 'owner@example.com', password: 'brand-new-pass' });
   const tok = csrfOf((await c.req('/admin')).text_);
-  const files = db.prepare('SELECT file FROM media WHERE project_id = ?').all(projectId);
+  const files = (await db.all('SELECT file FROM media WHERE project_id = ?', projectId));
   await c.form(`/admin/projects/${projectId}/delete`, { _csrf: tok });
   await sleep(200);
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM projects WHERE id = ?').get(projectId).n, 0);
+  assert.equal((await db.get('SELECT COUNT(*) AS n FROM projects WHERE id = ?', projectId)).n, 0);
   assert.equal(fs.existsSync(path.join(dataDir, 'media', files[0].file)), false);
+});
+
+test('daily cron job requires the secret and writes a backup', async () => {
+  const c = client();
+  const denied = await c.req('/api/cron/daily', { headers: { Authorization: 'Bearer wrong' } });
+  assert.equal(denied.status, 401);
+  const config = require('../src/config');
+  config.cronSecret = 'test-secret';
+  const ok = await c.req('/api/cron/daily', { headers: { Authorization: 'Bearer test-secret' } });
+  assert.equal(ok.status, 200, ok.text_);
+  const files = fs.readdirSync(path.join(dataDir, 'backups'));
+  assert.ok(files.some((f) => /^db-\d{4}-\d{2}-\d{2}\.json$/.test(f)));
+  const dump = JSON.parse(fs.readFileSync(path.join(dataDir, 'backups', files[0]), 'utf8'));
+  assert.ok(dump.tables.enquiries.length >= 1);
+});
+
+test('Vercel entry exports the app', () => {
+  const handler = require('../api/index');
+  assert.equal(typeof handler, 'function');
 });

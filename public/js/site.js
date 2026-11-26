@@ -70,10 +70,45 @@
       } else if (hint && files.files.length) hint.textContent = files.files.length + ' file(s) selected';
     });
   }
+  // Compress attached photos in the browser so enquiries upload fast and stay under the size limit.
+  function shrink(file) {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 600 * 1024 || !window.createImageBitmap) return Promise.resolve(file);
+    return createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bmp) {
+      var s = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
+      var c = document.createElement('canvas');
+      c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      return new Promise(function (res) {
+        c.toBlob(function (b) { res(b && b.size < file.size ? new File([b], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file); }, 'image/jpeg', 0.82);
+      });
+    }).catch(function () { return file; });
+  }
   document.querySelectorAll('form').forEach(function (f) {
-    f.addEventListener('submit', function () {
-      var b = f.querySelector('[data-submit]');
-      if (b) { setTimeout(function () { b.disabled = true; b.textContent = 'Sending…'; }, 0); }
+    f.addEventListener('submit', function (e) {
+      var input = f.querySelector('input[type=file][data-max-files]');
+      var max = Number(f.dataset.maxTotal || 0);
+      if (input && input.files.length && !f.dataset.ready && window.DataTransfer) {
+        e.preventDefault();
+        var b = f.querySelector('[data-submit]');
+        if (b) { b.disabled = true; b.textContent = 'Preparing files…'; }
+        Promise.all(Array.prototype.map.call(input.files, shrink)).then(function (files) {
+          var total = files.reduce(function (a, x) { return a + x.size; }, 0);
+          if (max && total > max - 200 * 1024) {
+            alert('The attached files are too large (' + (total / 1048576).toFixed(1) + ' MB). Please attach fewer files, or send drawings on WhatsApp after submitting.');
+            if (b) { b.disabled = false; b.textContent = 'Send enquiry'; }
+            return;
+          }
+          var dt = new DataTransfer();
+          files.forEach(function (x) { dt.items.add(x); });
+          input.files = dt.files;
+          f.dataset.ready = '1';
+          if (b) b.textContent = 'Sending…';
+          HTMLFormElement.prototype.submit.call(f);
+        });
+        return;
+      }
+      var btn = f.querySelector('[data-submit]');
+      if (btn) { setTimeout(function () { btn.disabled = true; btn.textContent = 'Sending…'; }, 0); }
     });
   });
 

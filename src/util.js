@@ -14,11 +14,10 @@ function slugify(str) {
   );
 }
 
-function uniqueSlug(db, table, base, excludeId) {
+async function uniqueSlug(db, table, base, excludeId) {
   let slug = slugify(base);
   let i = 1;
-  const q = db.prepare(`SELECT id FROM ${table} WHERE slug = ? AND id != ?`);
-  while (q.get(slug, excludeId || 0)) {
+  while (await db.get(`SELECT id FROM ${table} WHERE slug = ? AND id != ?`, slug, excludeId || 0)) {
     i += 1;
     slug = `${slugify(base)}-${i}`;
   }
@@ -122,7 +121,7 @@ function splitList(s) {
     .filter(Boolean);
 }
 
-// Simple in-memory fixed-window rate limiter.
+// Simple in-memory fixed-window rate limiter (single-process use only; see auth.rateLimit).
 function rateLimiter({ windowMs, max }) {
   const hits = new Map();
   setInterval(() => {
@@ -171,3 +170,6 @@ module.exports = {
   rateLimiter,
   csvCell,
 };
+
+// Wrap an async Express handler so errors reach the error middleware.
+module.exports.ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);

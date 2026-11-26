@@ -43,10 +43,11 @@ function cookieOpts(req) {
   };
 }
 
-function createSession(req, res, adminId) {
+async function createSession(req, res, adminId) {
   const token = randomToken(32);
   const now = Date.now();
-  db.prepare('INSERT INTO sessions (token_hash, admin_id, csrf, created_at, last_seen, user_agent) VALUES (?, ?, ?, ?, ?, ?)').run(
+  await db.run(
+    'INSERT INTO sessions (token_hash, admin_id, csrf, created_at, last_seen, user_agent) VALUES (?, ?, ?, ?, ?, ?)',
     sha256(token),
     adminId,
     randomToken(24),
@@ -54,44 +55,47 @@ function createSession(req, res, adminId) {
     now,
     String(req.headers['user-agent'] || '').slice(0, 200)
   );
-  db.prepare("UPDATE admins SET last_login = datetime('now') WHERE id = ?").run(adminId);
+  await db.run("UPDATE admins SET last_login = datetime('now') WHERE id = ?", adminId);
   res.cookie(COOKIE, token, cookieOpts(req));
 }
 
-function destroySession(req, res) {
+async function destroySession(req, res) {
   const token = parseCookies(req)[COOKIE];
-  if (token) db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha256(token));
+  if (token) await db.run('DELETE FROM sessions WHERE token_hash = ?', sha256(token));
   res.clearCookie(COOKIE, { path: '/' });
 }
 
 // Loads req.admin if a valid, non-idle session cookie exists.
-function loadSession(req, res, next) {
-  const token = parseCookies(req)[COOKIE];
-  if (!token) return next();
-  const th = sha256(token);
-  const s = db
-    .prepare(
+async function loadSession(req, res, next) {
+  try {
+    const token = parseCookies(req)[COOKIE];
+    if (!token) return next();
+    const th = sha256(token);
+    const s = await db.get(
       `SELECT s.*, a.id AS aid, a.name, a.email, a.mobile, a.role, a.active, a.notify_email
-       FROM sessions s JOIN admins a ON a.id = s.admin_id WHERE s.token_hash = ?`
-    )
-    .get(th);
-  const now = Date.now();
-  if (!s) {
-    res.clearCookie(COOKIE, { path: '/' });
-    return next();
+       FROM sessions s JOIN admins a ON a.id = s.admin_id WHERE s.token_hash = ?`,
+      th
+    );
+    const now = Date.now();
+    if (!s) {
+      res.clearCookie(COOKIE, { path: '/' });
+      return next();
+    }
+    const idle = now - s.last_seen > config.sessionIdleMinutes * 60 * 1000;
+    const tooOld = now - s.created_at > config.sessionMaxDays * 86400 * 1000;
+    if (idle || tooOld || !s.active) {
+      await db.run('DELETE FROM sessions WHERE token_hash = ?', th);
+      res.clearCookie(COOKIE, { path: '/' });
+      req.sessionExpired = true;
+      return next();
+    }
+    if (now - s.last_seen > 30 * 1000) await db.run('UPDATE sessions SET last_seen = ? WHERE token_hash = ?', now, th);
+    req.admin = { id: s.aid, name: s.name, email: s.email, mobile: s.mobile, role: s.role, notify_email: s.notify_email };
+    req.csrfToken = s.csrf;
+    next();
+  } catch (e) {
+    next(e);
   }
-  const idle = now - s.last_seen > config.sessionIdleMinutes * 60 * 1000;
-  const tooOld = now - s.created_at > config.sessionMaxDays * 86400 * 1000;
-  if (idle || tooOld || !s.active) {
-    db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(th);
-    res.clearCookie(COOKIE, { path: '/' });
-    req.sessionExpired = true;
-    return next();
-  }
-  if (now - s.last_seen > 30 * 1000) db.prepare('UPDATE sessions SET last_seen = ? WHERE token_hash = ?').run(now, th);
-  req.admin = { id: s.aid, name: s.name, email: s.email, mobile: s.mobile, role: s.role, notify_email: s.notify_email };
-  req.csrfToken = s.csrf;
-  next();
 }
 
 function requireAdmin(req, res, next) {
@@ -127,46 +131,61 @@ function csrfProtect(req, res, next) {
 }
 
 // ---- Password reset ----
-function createResetToken(adminId) {
+async function createResetToken(adminId) {
   const token = randomToken(32);
-  db.prepare('DELETE FROM password_resets WHERE admin_id = ?').run(adminId);
-  db.prepare('INSERT INTO password_resets (token_hash, admin_id, expires) VALUES (?, ?, ?)').run(sha256(token), adminId, Date.now() + 60 * 60 * 1000);
+  await db.batch([
+    ['DELETE FROM password_resets WHERE admin_id = ?', adminId],
+    ['INSERT INTO password_resets (token_hash, admin_id, expires) VALUES (?, ?, ?)', sha256(token), adminId, Date.now() + 60 * 60 * 1000],
+  ]);
   return token;
 }
 
-function findResetToken(token) {
-  const r = db.prepare('SELECT * FROM password_resets WHERE token_hash = ?').get(sha256(token || ''));
+async function findResetToken(token) {
+  const r = await db.get('SELECT * FROM password_resets WHERE token_hash = ?', sha256(token || ''));
   if (!r || r.used || r.expires < Date.now()) return null;
   return r;
 }
 
-function consumeResetToken(token, newPassword) {
-  const r = findResetToken(token);
+async function consumeResetToken(token, newPassword) {
+  const r = await findResetToken(token);
   if (!r) return false;
-  db.prepare('UPDATE admins SET password_hash = ? WHERE id = ?').run(hashPassword(newPassword), r.admin_id);
-  db.prepare('UPDATE password_resets SET used = 1 WHERE token_hash = ?').run(r.token_hash);
-  db.prepare('DELETE FROM sessions WHERE admin_id = ?').run(r.admin_id); // log out everywhere
+  await db.batch([
+    ['UPDATE admins SET password_hash = ? WHERE id = ?', hashPassword(newPassword), r.admin_id],
+    ['UPDATE password_resets SET used = 1 WHERE token_hash = ?', r.token_hash],
+    ['DELETE FROM sessions WHERE admin_id = ?', r.admin_id], // log out everywhere
+  ]);
   return true;
 }
 
 // ---- Mobile OTP ----
-function createOtp(mobile) {
+async function createOtp(mobile) {
   const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
-  db.prepare(
-    'INSERT INTO otps (mobile, code_hash, expires, attempts) VALUES (?, ?, ?, 0) ON CONFLICT(mobile) DO UPDATE SET code_hash = excluded.code_hash, expires = excluded.expires, attempts = 0'
-  ).run(mobile, sha256(`${mobile}:${code}`), Date.now() + 10 * 60 * 1000);
+  await db.run(
+    'INSERT INTO otps (mobile, code_hash, expires, attempts) VALUES (?, ?, ?, 0) ON CONFLICT(mobile) DO UPDATE SET code_hash = excluded.code_hash, expires = excluded.expires, attempts = 0',
+    mobile,
+    sha256(`${mobile}:${code}`),
+    Date.now() + 10 * 60 * 1000
+  );
   return code;
 }
 
-function verifyOtp(mobile, code) {
-  const r = db.prepare('SELECT * FROM otps WHERE mobile = ?').get(mobile);
+async function verifyOtp(mobile, code) {
+  const r = await db.get('SELECT * FROM otps WHERE mobile = ?', mobile);
   if (!r || r.expires < Date.now() || r.attempts >= 5) return false;
   if (r.code_hash !== sha256(`${mobile}:${String(code || '').trim()}`)) {
-    db.prepare('UPDATE otps SET attempts = attempts + 1 WHERE mobile = ?').run(mobile);
+    await db.run('UPDATE otps SET attempts = attempts + 1 WHERE mobile = ?', mobile);
     return false;
   }
-  db.prepare('DELETE FROM otps WHERE mobile = ?').run(mobile);
+  await db.run('DELETE FROM otps WHERE mobile = ?', mobile);
   return true;
+}
+
+// Persistent rate limiter (works across serverless instances): fixed window per key.
+async function rateLimit(key, max, windowMs) {
+  const now = Date.now();
+  const bucket = `${key}:${Math.floor(now / windowMs)}`;
+  await db.run('INSERT INTO rate_limits (key, count, expires) VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET count = count + 1', bucket, now + windowMs);
+  return (await db.one('SELECT count FROM rate_limits WHERE key = ?', bucket)) <= max;
 }
 
 module.exports = {
@@ -185,4 +204,5 @@ module.exports = {
   consumeResetToken,
   createOtp,
   verifyOtp,
+  rateLimit,
 };
