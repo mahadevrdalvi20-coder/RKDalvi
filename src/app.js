@@ -63,8 +63,36 @@ function createApp() {
     res.sendFile(path.join(config.root, 'public/js/sw.js'));
   });
 
-  // wait for the database schema on cold start
-  app.use((req, res, next) => ready.then(() => next(), next));
+  // Health check: shows (yes/no only) whether the database and storage are connected.
+  app.get('/healthz', async (req, res) => {
+    const { settingsStatus } = require('./diagnostics');
+    let database = 'ok';
+    try {
+      await ready;
+      await require('./db').db.one('SELECT COUNT(*) FROM settings');
+    } catch (e) {
+      database = `error: ${String(e.message).slice(0, 200)}`;
+    }
+    res.set('Cache-Control', 'no-store').json({
+      ok: database === 'ok',
+      database,
+      databaseType: process.env.TURSO_DATABASE_URL || process.env.LIBSQL_URL ? 'turso' : config.isVercel ? 'temporary (NOT saved — connect Turso)' : 'local file',
+      storage: config.useBlob ? 'vercel-blob' : config.isVercel ? 'temporary (NOT saved — connect Blob)' : 'local disk',
+      settings: Object.fromEntries(settingsStatus().map(([k, ok]) => [k, ok])),
+      node: process.version,
+    });
+  });
+
+  // wait for the database schema on cold start; show a setup page if it cannot be reached
+  app.use((req, res, next) =>
+    ready.then(
+      () => next(),
+      (e) => {
+        console.error('[db] not ready:', e);
+        res.status(503).set('Cache-Control', 'no-store').type('html').send(require('./diagnostics').setupPage('Database not reachable', e));
+      }
+    )
+  );
   app.use(express.urlencoded({ extended: false, limit: '200kb' }));
   app.use(express.json({ limit: '200kb' }));
   app.use(auth.loadSession);

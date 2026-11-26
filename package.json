@@ -43,7 +43,7 @@
   },
   "private": true,
   "engines": {
-    "node": ">=22.13"
+    "node": "22.x"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"

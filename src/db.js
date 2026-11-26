@@ -322,8 +322,22 @@ async function init() {
     );
   }
 }
-const ready = init();
-ready.catch((e) => console.error('[db] initialisation failed:', e.message));
+// Initialise once; if it fails (e.g. database briefly unreachable), retry on the next use.
+let initPromise = null;
+function ensureReady() {
+  if (!initPromise) {
+    initPromise = init().catch((e) => {
+      initPromise = null;
+      throw e;
+    });
+  }
+  return initPromise;
+}
+const ready = {
+  then: (ok, fail) => ensureReady().then(ok, fail),
+  catch: (fail) => ensureReady().catch(fail),
+};
+ensureReady().catch((e) => console.error('[db] initialisation failed:', e.message));
 
 function parseJson(v, d) {
   try {
