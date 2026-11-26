@@ -1,0 +1,21 @@
+# Simple one-server setup with automatic HTTPS via Caddy.
+# 1) Point your domain's DNS A record to the server  2) edit DOMAIN below  3) docker compose up -d
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - rkd-data:/data
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    command: caddy reverse-proxy --from rkdalvi.com --to app:3000
+    volumes:
+      - caddy-data:/data
+volumes:
+  rkd-data:
+  caddy-data:

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2b1a0f">
+<title><%= title ? title + ' · ' : '' %>Admin · <%= s.name %></title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/assets/img/favicon.png" type="image/png">
+<link rel="stylesheet" href="/assets/css/site.css">
+<link rel="stylesheet" href="/assets/css/admin.css">
+</head>
+<body class="admin <%= typeof bare !== 'undefined' && bare ? 'admin-bare' : '' %>" data-csrf="<%= csrf %>">
+<% if (!(typeof bare !== 'undefined' && bare) && admin) { %>
+<% const nav = [['/admin', 'Dashboard', 'chart'], ['/admin/projects', 'Projects', 'grid'], ['/admin/enquiries', 'Enquiries', 'inbox'], ['/admin/settings', 'Settings', 'settings']];
+   const isActive = (href) => href === '/admin' ? (path === '/admin' || path === '/admin/') : path.startsWith(href); %>
+<aside class="a-side">
+  <a href="/admin" class="a-brand"><span class="brand-mark">RK</span><span><strong><%= s.name %></strong><small>Admin</small></span></a>
+  <nav class="a-nav">
+    <% nav.forEach(([href, label, ic]) => { %><a href="<%= href %>" class="<%= isActive(href) ? 'active' : '' %>"><%- icon(ic) %><%= label %></a><% }) %>
+  </nav>
+  <form method="post" action="/admin/projects/new" class="a-side-add"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-gold btn-block"><%- icon('plus') %> Add project</button></form>
+  <div class="a-side-foot">
+    <a href="/" target="_blank" rel="noopener"><%- icon('external') %> View website</a>
+    <form method="post" action="/admin/logout"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="linkbtn"><%- icon('logout') %> Log out</button></form>
+    <small>Signed in as <%= admin.name %></small>
+  </div>
+</aside>
+<header class="a-top">
+  <a href="/admin" class="a-brand"><span class="brand-mark">RK</span><strong>Admin</strong></a>
+  <div class="a-top-actions">
+    <a href="/" target="_blank" rel="noopener" class="iconbtn" aria-label="View website"><%- icon('external') %></a>
+    <form method="post" action="/admin/logout"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="iconbtn" aria-label="Log out"><%- icon('logout') %></button></form>
+  </div>
+</header>
+<nav class="a-tabs" aria-label="Admin">
+  <a href="/admin" class="<%= isActive('/admin') ? 'active' : '' %>"><%- icon('chart') %><span>Home</span></a>
+  <a href="/admin/projects" class="<%= isActive('/admin/projects') ? 'active' : '' %>"><%- icon('grid') %><span>Projects</span></a>
+  <form method="post" action="/admin/projects/new" class="a-tab-add"><input type="hidden" name="_csrf" value="<%= csrf %>"><button aria-label="Add project"><%- icon('plus') %></button></form>
+  <a href="/admin/enquiries" class="<%= isActive('/admin/enquiries') ? 'active' : '' %>"><%- icon('inbox') %><span>Enquiries</span></a>
+  <a href="/admin/settings" class="<%= isActive('/admin/settings') ? 'active' : '' %>"><%- icon('settings') %><span>Settings</span></a>
+</nav>
+<% } %>
+<main class="a-main" id="main">
+<% if (locals.flash) { %><div class="flash flash-<%= flash.type %>" role="status"><%= flash.text %></div><% } %>

@@ -1,0 +1,101 @@
+<%- include('_head') %>
+<div class="a-page">
+  <div class="a-head">
+    <div><h1>Namaste, <%= admin.name.split(' ')[0] %></h1><p class="muted">Here’s how your business app is doing.</p></div>
+    <form method="post" action="/admin/projects/new"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-gold btn-lg"><%- icon('camera') %> Add a new project</button></form>
+  </div>
+
+  <% const setup = [];
+     if (!s.logo) setup.push(['Upload your logo', '/admin/settings']);
+     if (s.phone === '+91 98765 43210') setup.push(['Add your real phone & WhatsApp number', '/admin/settings']);
+     if (!stats.published) setup.push(['Publish your first project', '/admin/projects']);
+     if (!s.instagram && !s.facebook && !s.google_business) setup.push(['Add social media / Google Business links', '/admin/settings']); %>
+  <% if (setup.length) { %>
+  <div class="a-card setup-card">
+    <h2 class="h3">Finish setting up</h2>
+    <ul class="checklist"><% setup.forEach(([t, h]) => { %><li><a href="<%= h %>"><%= t %> <%- icon('right') %></a></li><% }) %></ul>
+  </div>
+  <% } %>
+
+  <div class="stats">
+    <a class="stat" href="/admin/enquiries?status=new"><span class="stat-v"><%= stats.enqNew %></span><span class="stat-l">New enquiries</span></a>
+    <a class="stat" href="/admin/enquiries"><span class="stat-v"><%= stats.enqMonth %></span><span class="stat-l">Enquiries this month</span></a>
+    <a class="stat" href="/admin/projects?status=published"><span class="stat-v"><%= stats.published %></span><span class="stat-l">Live projects<% if (stats.drafts) { %> · <%= stats.drafts %> draft/hidden<% } %></span></a>
+    <div class="stat"><span class="stat-v"><%= stats.photos %></span><span class="stat-l">Photos<% if (stats.videos) { %> · <%= stats.videos %> videos<% } %></span></div>
+    <div class="stat"><span class="stat-v"><%= stats.visits30 %></span><span class="stat-l">Visits (30 days)</span></div>
+    <div class="stat"><span class="stat-v"><%= stats.appOpens30 %></span><span class="stat-l">App opens (30 days)</span></div>
+    <div class="stat"><span class="stat-v"><%= stats.views %></span><span class="stat-l">Project views (all time)</span></div>
+    <div class="stat"><span class="stat-v"><%= stats.won %></span><span class="stat-l">Enquiries won</span></div>
+  </div>
+
+  <div class="a-grid-2">
+    <section class="a-card">
+      <div class="a-card-head"><h2 class="h3">Recent enquiries</h2><a href="/admin/enquiries">View all</a></div>
+      <% if (recentEnquiries.length) { %>
+        <ul class="list">
+          <% recentEnquiries.forEach(e => { %>
+            <li><a href="/admin/enquiries/<%= e.id %>" class="list-row">
+              <span class="list-main"><strong><%= e.name %></strong><small><%= e.service %> · <%= e.city %></small></span>
+              <span class="list-side"><span class="badge badge-<%= e.status %>"><%= statusLabel(e.status) %></span><small><%= u.timeAgo(e.created_at) %></small></span>
+            </a></li>
+          <% }) %>
+        </ul>
+      <% } else { %><p class="muted">No enquiries yet. Share your website link on WhatsApp and Instagram to start getting leads.</p><% } %>
+    </section>
+
+    <section class="a-card">
+      <div class="a-card-head"><h2 class="h3">Most viewed projects</h2><a href="/admin/projects">All projects</a></div>
+      <% if (topProjects.length) { %>
+        <ul class="list">
+          <% topProjects.forEach(p => { %>
+            <li><a href="/admin/projects/<%= p.id %>" class="list-row">
+              <% if (p.cover_thumb) { %><img src="<%= media(p.cover_thumb) %>" alt="" class="list-thumb"><% } %>
+              <span class="list-main"><strong><%= p.title %></strong><small><%= p.category_name || '' %></small></span>
+              <span class="list-side"><strong><%= p.view_count %></strong><small>views</small></span>
+            </a></li>
+          <% }) %>
+        </ul>
+      <% } else { %><p class="muted">Publish a project to see views here.</p><% } %>
+    </section>
+  </div>
+
+  <div class="a-grid-2">
+    <section class="a-card">
+      <h2 class="h3">Visits per day — last 30 days</h2>
+      <% const max = Math.max(1, ...days.map(d => d.web + d.app)); const W = 600, H = 160, bw = W / days.length; %>
+      <svg class="chart" viewBox="0 0 <%= W %> <%= H + 22 %>" role="img" aria-label="Bar chart of daily visits over the last 30 days, total <%= stats.visits30 %>">
+        <line x1="0" x2="<%= W %>" y1="<%= H %>" y2="<%= H %>" class="chart-axis"/>
+        <% days.forEach((d, i) => { const v = d.web + d.app; const h = v ? Math.max(3, (v / max) * (H - 14)) : 0; %>
+          <g class="chart-bar">
+            <rect x="<%= i * bw %>" y="0" width="<%= bw %>" height="<%= H %>" class="chart-hit"><title><%= u.fmtDate(d.day + ' 00:00:00') %>: <%= v %> visits (<%= d.app %> from app)</title></rect>
+            <% if (h) { %><path d="M<%= i * bw + 1 %>,<%= H %> v-<%= h - 4 %> q0,-4 4,-4 h<%= bw - 10 %> q4,0 4,4 v<%= h - 4 %> z" class="chart-fill"/><% } %>
+          </g>
+        <% }) %>
+        <text x="0" y="<%= H + 18 %>" class="chart-label"><%= u.fmtDate(days[0].day + ' 00:00:00', { year: undefined }) %></text>
+        <text x="<%= W %>" y="<%= H + 18 %>" text-anchor="end" class="chart-label">Today</text>
+        <text x="<%= W %>" y="10" text-anchor="end" class="chart-label">peak <%= max %></text>
+      </svg>
+      <details class="table-toggle"><summary>Show as table</summary>
+        <table class="a-table"><thead><tr><th>Day</th><th>Website</th><th>App</th></tr></thead><tbody>
+          <% days.slice().reverse().forEach(d => { %><tr><td><%= u.fmtDate(d.day + ' 00:00:00') %></td><td><%= d.web %></td><td><%= d.app %></td></tr><% }) %>
+        </tbody></table>
+      </details>
+      <p class="hint">App downloads are shown in your Google Play Console.</p>
+    </section>
+
+    <section class="a-card">
+      <h2 class="h3">Enquiry pipeline</h2>
+      <ul class="pipeline">
+        <% byStatus.forEach(st => { %><li><a href="/admin/enquiries?status=<%= st.key %>"><span class="badge badge-<%= st.key %>"><%= st.label %></span><strong><%= st.n %></strong></a></li><% }) %>
+      </ul>
+      <div class="notify-box" id="push-box" data-key="<%= pushKey %>">
+        <h3 class="h4">Instant alerts on this phone</h3>
+        <p class="muted small" data-push-status>Get a notification on this device the moment a new enquiry arrives.</p>
+        <button class="btn btn-dark" data-push-enable hidden><%- icon('bell') %> Turn on notifications</button>
+        <button class="btn btn-ghost" data-push-test hidden>Send a test</button>
+        <p class="muted small">Email alerts: <%= mailConfigured ? 'on' : 'not set up yet (ask your developer to add SMTP settings)' %>.</p>
+      </div>
+    </section>
+  </div>
+</div>
+<%- include('_foot') %>

@@ -1,0 +1,65 @@
+<%- include('_head') %>
+<div class="a-page">
+  <%- include('_settings-nav') %>
+  <form method="post" action="/admin/settings/business?_csrf=<%= csrf %>" enctype="multipart/form-data" class="form">
+    <section class="a-card">
+      <h2 class="h3">Brand</h2>
+      <div class="logo-row">
+        <div class="logo-prev"><% if (s.logo) { %><img src="<%= media(s.logo) %>" alt="Current logo"><% } else { %><span class="brand-mark">RK</span><% } %></div>
+        <div class="field"><label for="logo">Logo <span class="opt">(PNG with transparent background works best)</span></label><input id="logo" type="file" name="logo" accept="image/*">
+          <% if (s.logo) { %><label class="check"><input type="checkbox" name="remove_logo" value="1"> Remove logo</label><% } %></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label for="name">Business name</label><input id="name" name="name" value="<%= s.name %>" required></div>
+        <div class="field"><label for="tagline">Tagline</label><input id="tagline" name="tagline" value="<%= s.tagline %>"></div>
+      </div>
+      <div class="field"><label for="intro">Home page introduction</label><textarea id="intro" name="intro" rows="3"><%= s.intro %></textarea></div>
+      <label class="switch"><input type="checkbox" name="watermark_default" value="1" <%= s.watermark_default === '1' ? 'checked' : '' %>><span class="switch-ui"></span> Watermark new project photos by default</label>
+    </section>
+
+    <section class="a-card">
+      <h2 class="h3">Highlights <span class="opt">(numbers on the Home page)</span></h2>
+      <% for (let i = 0; i < 4; i++) { const h = s.highlightsList[i] || {}; %>
+        <div class="grid-hl">
+          <input name="hl_value_<%= i %>" value="<%= h.value || '' %>" placeholder="e.g. 25+" aria-label="Highlight <%= i + 1 %> number">
+          <input name="hl_label_<%= i %>" value="<%= h.label || '' %>" placeholder="e.g. Years of experience" aria-label="Highlight <%= i + 1 %> label">
+        </div>
+      <% } %>
+    </section>
+
+    <section class="a-card">
+      <h2 class="h3">Contact details</h2>
+      <div class="grid-2">
+        <div class="field"><label for="phone">Phone number (for Call button)</label><input id="phone" name="phone" type="tel" value="<%= s.phone %>"></div>
+        <div class="field"><label for="whatsapp">WhatsApp number</label><input id="whatsapp" name="whatsapp" type="tel" value="<%= s.whatsapp %>" placeholder="e.g. 9876543210"></div>
+        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" value="<%= s.email %>"></div>
+        <div class="field"><label for="map_query">Google Maps place name / coordinates <span class="opt">(optional)</span></label><input id="map_query" name="map_query" value="<%= s.map_query %>" placeholder="e.g. R K Dalvi Furniture, Mapusa or 15.59,73.81"></div>
+      </div>
+      <div class="field"><label for="address">Office / workshop address</label><textarea id="address" name="address" rows="2"><%= s.address %></textarea></div>
+      <div class="field"><label for="hours">Working hours</label><textarea id="hours" name="hours" rows="3"><%= s.hours %></textarea></div>
+      <div class="field"><label for="whatsapp_message">Ready WhatsApp message from visitors</label><input id="whatsapp_message" name="whatsapp_message" value="<%= s.whatsapp_message %>"></div>
+    </section>
+
+    <section class="a-card">
+      <h2 class="h3">Social links</h2>
+      <div class="grid-2">
+        <div class="field"><label for="instagram">Instagram URL</label><input id="instagram" name="instagram" type="url" value="<%= s.instagram %>" placeholder="https://instagram.com/…"></div>
+        <div class="field"><label for="facebook">Facebook URL</label><input id="facebook" name="facebook" type="url" value="<%= s.facebook %>" placeholder="https://facebook.com/…"></div>
+        <div class="field"><label for="google_business">Google Business profile URL</label><input id="google_business" name="google_business" type="url" value="<%= s.google_business %>" placeholder="https://g.page/…"></div>
+        <div class="field"><label for="youtube">YouTube URL</label><input id="youtube" name="youtube" type="url" value="<%= s.youtube %>"></div>
+      </div>
+    </section>
+
+    <section class="a-card">
+      <h2 class="h3">Enquiry form &amp; Google search</h2>
+      <div class="grid-2">
+        <div class="field"><label for="client_types">“You are a” choices <span class="opt">(one per line)</span></label><textarea id="client_types" name="client_types" rows="6"><%= s.clientTypes.join('\n') %></textarea></div>
+        <div class="field"><label for="budget_ranges">Budget ranges <span class="opt">(one per line)</span></label><textarea id="budget_ranges" name="budget_ranges" rows="6"><%= s.budgetRanges.join('\n') %></textarea></div>
+        <div class="field"><label for="seo_city">Main city (for Google)</label><input id="seo_city" name="seo_city" value="<%= s.seo_city %>"></div>
+      </div>
+      <div class="field"><label for="seo_description">Description shown in Google results</label><textarea id="seo_description" name="seo_description" rows="3" maxlength="300"><%= s.seo_description %></textarea><p class="hint">Mention what you do and where, e.g. “hotel furniture contractor in Goa”.</p></div>
+    </section>
+    <div class="save-bar"><button class="btn btn-gold btn-lg"><%- icon('check') %> Save settings</button></div>
+  </form>
+</div>
+<%- include('_foot') %>

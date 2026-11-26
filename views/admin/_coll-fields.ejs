@@ -1,0 +1,17 @@
+<% c.fields.forEach(f => { const v = row ? row[f.name] : (f.default ?? ''); const id = `${prefix}-${f.name}`; %>
+  <% if (f.type === 'textarea') { %>
+    <div class="field"><label for="<%= id %>"><%= f.label %></label><textarea id="<%= id %>" name="<%= f.name %>" rows="3" <%= f.required ? 'required' : '' %>><%= v %></textarea></div>
+  <% } else if (f.type === 'checkbox') { %>
+    <div class="field"><label class="switch"><input type="checkbox" name="<%= f.name %>" value="1" <%= v ? 'checked' : '' %>><span class="switch-ui"></span> <%= f.label %></label></div>
+  <% } else if (f.type === 'select') { %>
+    <div class="field"><label for="<%= id %>"><%= f.label %></label><select id="<%= id %>" name="<%= f.name %>"><% f.options.forEach(o => { %><option <%= String(v) === o ? 'selected' : '' %>><%= o %></option><% }) %></select></div>
+  <% } else if (f.type === 'icon') { %>
+    <fieldset class="field"><legend><%= f.label %></legend><div class="icon-pick"><% f.options.forEach(o => { %><label><input type="radio" name="<%= f.name %>" value="<%= o %>" <%= (v || 'sofa') === o ? 'checked' : '' %>><span title="<%= o %>"><%- icon(o) %></span></label><% }) %></div></fieldset>
+  <% } else if (f.type === 'image') { %>
+    <div class="field"><label for="<%= id %>"><%= f.label %></label>
+      <div class="img-field"><% if (v) { %><img src="<%= media(v) %>" alt=""><% } %><input id="<%= id %>" type="file" name="<%= f.name %>" accept="image/*"></div>
+      <% if (v) { %><label class="check"><input type="checkbox" name="remove_<%= f.name %>" value="1"> Remove</label><% } %></div>
+  <% } else { %>
+    <div class="field"><label for="<%= id %>"><%= f.label %></label><input id="<%= id %>" name="<%= f.name %>" type="<%= f.type === 'number' ? 'number' : 'text' %>" value="<%= v %>" <%= f.required ? 'required' : '' %>></div>
+  <% } %>
+<% }) %>

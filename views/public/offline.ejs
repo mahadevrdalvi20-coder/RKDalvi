@@ -1,0 +1,10 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="section">
+  <div class="wrap narrow center">
+    <h1>You are offline</h1>
+    <p class="lead">Please check your internet connection. You can still call or WhatsApp us.</p>
+    <div class="hero-actions-inline center"><a href="<%= telLink %>" class="btn btn-dark"><%- icon('phone') %> Call</a><a href="<%= waLink() %>" class="btn btn-wa"><%- icon('whatsapp') %> WhatsApp</a></div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

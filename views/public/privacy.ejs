@@ -1,0 +1,25 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="page-hero"><div class="wrap"><h1>Privacy Policy</h1><p class="lead">Last updated: <%= u.fmtDate(new Date()) %></p></div></section>
+<section class="section section-top0">
+  <div class="wrap narrow prose">
+    <p>This policy explains how <strong><%= s.name %></strong> (“we”, “us”) handles information when you use our website and Android app (together, the “App”).</p>
+    <h2>Information we collect</h2>
+    <ul>
+      <li><strong>Enquiries:</strong> when you submit the enquiry / quote form we collect the details you enter — name, mobile number, email (optional), type of client, service needed, project city, budget, expected start date, message and any reference photos or drawings you attach.</li>
+      <li><strong>Usage statistics:</strong> we count page visits and project views as anonymous daily totals. We do not build profiles of visitors.<% if (config.gaMeasurementId) { %> We also use Google Analytics, which may set cookies; see Google’s privacy policy.<% } %></li>
+      <li><strong>Cookies:</strong> we use a small number of essential cookies (for example, to count a visit once and to keep administrators signed in).</li>
+    </ul>
+    <h2>How we use your information</h2>
+    <p>Only to respond to your enquiry, prepare quotations, arrange site visits and communicate with you about your project. We do not sell or rent your personal information, and we do not send marketing messages without your consent.</p>
+    <h2>Who can see it</h2>
+    <p>Enquiry details are visible only to authorised staff of <%= s.name %> through a password-protected admin area. Data is transmitted over HTTPS and stored on secured servers with daily backups.</p>
+    <h2>Client projects and photos</h2>
+    <p>Client names, logos, photos and testimonials are published only with the client’s permission. If you would like any content about your project removed, contact us and we will remove it promptly.</p>
+    <h2>Retention and your rights</h2>
+    <p>We keep enquiry records for as long as needed for business and legal purposes. You may ask us to access, correct or delete your information at any time.</p>
+    <h2>Contact</h2>
+    <p><%= s.name %>, <%= s.address %><br>Phone: <%= s.phone %><% if (s.email) { %><br>Email: <a href="mailto:<%= s.email %>"><%= s.email %></a><% } %></p>
+  </div>
+</section>
+<%- include('../partials/footer') %>

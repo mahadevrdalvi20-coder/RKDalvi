@@ -1,0 +1,5 @@
+<% const tabs = [['business','/admin/settings','Business'],['about','/admin/settings/about','About Us'],['categories','/admin/settings/categories','Categories'],['services','/admin/settings/services','Services'],['testimonials','/admin/settings/testimonials','Testimonials'],['clients','/admin/settings/clients','Clients'],['team','/admin/settings/team','Team'],['admins','/admin/settings/admins','Admins'],['account','/admin/settings/account','My account']]; %>
+<h1>Settings</h1>
+<nav class="seg seg-scroll settings-nav" aria-label="Settings sections">
+  <% tabs.forEach(([k, h, l]) => { %><a href="<%= h %>" class="<%= tab === k ? 'active' : '' %>"><%= l %></a><% }) %>
+</nav>

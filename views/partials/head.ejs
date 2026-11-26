@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<% const fullTitle = title ? `${title} | ${s.name}` : `${s.name} — ${s.tagline}`; %>
+<title><%= fullTitle %></title>
+<meta name="description" content="<%= description || s.seo_description %>">
+<link rel="canonical" href="<%= canonical %>">
+<meta name="theme-color" content="#4a2e1b">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/assets/img/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/img/icon-192.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="<%= s.name %>">
+<meta property="og:title" content="<%= fullTitle %>">
+<meta property="og:description" content="<%= description || s.seo_description %>">
+<meta property="og:url" content="<%= canonical %>">
+<% if (ogImage) { %><meta property="og:image" content="<%= baseUrl + ogImage %>"><meta name="twitter:card" content="summary_large_image"><% } %>
+<link rel="preload" href="/fonts/playfair/playfair-display-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/inter/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/css/site.css">
+<% if (typeof extraHead !== 'undefined') { %><%- extraHead %><% } %>
+<% if (config.gaMeasurementId) { %><script async src="https://www.googletagmanager.com/gtag/js?id=<%= config.gaMeasurementId %>"></script><script src="/assets/js/ga.js" data-id="<%= config.gaMeasurementId %>" id="ga-init"></script><% } %>
+<script type="application/ld+json"><%- JSON.stringify({
+  '@context': 'https://schema.org', '@type': 'HomeAndConstructionBusiness', name: s.name, description: s.seo_description,
+  url: baseUrl, telephone: s.phone, email: s.email, address: s.address, image: ogImage ? baseUrl + ogImage : undefined,
+  areaServed: s.seo_city || undefined, openingHours: undefined,
+  sameAs: [s.instagram, s.facebook, s.google_business, s.youtube].filter(Boolean)
+}).replace(/</g, '\\u003c') %></script>
+</head>

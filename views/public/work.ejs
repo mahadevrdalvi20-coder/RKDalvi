@@ -1,0 +1,53 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="page-hero">
+  <div class="wrap">
+    <p class="eyebrow">Portfolio</p>
+    <h1><%= activeService ? `${activeService.name} projects` : 'Our Work' %></h1>
+    <p class="lead">Hotels, resorts, restaurants, offices and homes — furniture and interiors we have designed, built and installed.</p>
+  </div>
+</section>
+
+<section class="section section-top0">
+  <div class="wrap">
+    <form class="work-tools" method="get" action="/work" role="search">
+      <div class="search-box">
+        <%- icon('search') %>
+        <input type="search" name="q" value="<%= q %>" placeholder="Search by project name or location" aria-label="Search projects">
+      </div>
+      <% if (category) { %><input type="hidden" name="category" value="<%= category %>"><% } %>
+      <label class="sort">
+        <span class="sr-only">Sort</span>
+        <select name="sort" data-autosubmit>
+          <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest first</option>
+          <option value="oldest" <%= sort === 'oldest' ? 'selected' : '' %>>Oldest first</option>
+          <option value="popular" <%= sort === 'popular' ? 'selected' : '' %>>Most viewed</option>
+        </select>
+      </label>
+      <button class="btn btn-dark" type="submit">Search</button>
+    </form>
+
+    <div class="cat-chips scroll-x" role="list">
+      <a role="listitem" class="chip <%= !category ? 'active' : '' %>" href="/work<%= q ? '?q=' + encodeURIComponent(q) : '' %>">All</a>
+      <% categories.forEach(c => { %>
+        <a role="listitem" class="chip <%= category === c.slug ? 'active' : '' %>" href="/work?category=<%= c.slug %><%= q ? '&q=' + encodeURIComponent(q) : '' %>"><%= c.name %><% if (c.project_count) { %> <span><%= c.project_count %></span><% } %></a>
+      <% }) %>
+    </div>
+
+    <% if (projects.length) { %>
+      <p class="result-count"><%= projects.length %> project<%= projects.length === 1 ? '' : 's' %><%= q ? ` matching “${q}”` : '' %></p>
+      <div class="pgrid">
+        <% projects.forEach(p => { %><%- include('../partials/project-card', { p }) %><% }) %>
+      </div>
+    <% } else { %>
+      <div class="empty">
+        <%- icon('image') %>
+        <h2>No projects found</h2>
+        <p><%= q || category ? 'Try a different search or category.' : 'Our portfolio is being updated. Please check back soon, or contact us to see more of our work.' %></p>
+        <a href="/work" class="btn btn-dark">See all projects</a>
+      </div>
+    <% } %>
+  </div>
+</section>
+<%- include('../partials/cta') %>
+<%- include('../partials/footer') %>

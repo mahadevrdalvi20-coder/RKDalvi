@@ -1,0 +1,40 @@
+<%- include('_head') %>
+<div class="a-page">
+  <%- include('_settings-nav') %>
+  <form method="post" action="/admin/settings/about?_csrf=<%= csrf %>" enctype="multipart/form-data" class="form">
+    <section class="a-card">
+      <h2 class="h3">Our story</h2>
+      <div class="field"><label for="about_story">Business story</label><textarea id="about_story" name="about_story" rows="7"><%= s.about_story %></textarea></div>
+    </section>
+    <section class="a-card">
+      <h2 class="h3">Founder / owner</h2>
+      <div class="logo-row">
+        <div class="logo-prev round"><% if (s.owner_photo) { %><img src="<%= media(s.owner_photo) %>" alt=""><% } else { %><%- icon('users') %><% } %></div>
+        <div class="field"><label for="owner_photo">Photo</label><input id="owner_photo" type="file" name="owner_photo" accept="image/*">
+          <% if (s.owner_photo) { %><label class="check"><input type="checkbox" name="remove_owner_photo" value="1"> Remove photo</label><% } %></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label for="owner_name">Name</label><input id="owner_name" name="owner_name" value="<%= s.owner_name %>"></div>
+        <div class="field"><label for="owner_title">Title</label><input id="owner_title" name="owner_title" value="<%= s.owner_title %>"></div>
+      </div>
+      <div class="field"><label for="owner_bio">Introduction</label><textarea id="owner_bio" name="owner_bio" rows="4"><%= s.owner_bio %></textarea></div>
+    </section>
+    <section class="a-card">
+      <h2 class="h3">Workshop / factory photos</h2>
+      <div class="field"><label for="workshop">Add photos</label><input id="workshop" type="file" name="workshop" accept="image/*" multiple></div>
+      <% if (workshop.length) { %>
+        <ul class="thumbs">
+          <% workshop.forEach(w => { %><li><img src="<%= media(w.thumb || w.file) %>" alt=""><button type="submit" form="del-ws-<%= w.id %>" class="iconbtn" aria-label="Delete photo"><%- icon('trash') %></button></li><% }) %>
+        </ul>
+      <% } %>
+    </section>
+    <section class="a-card">
+      <h2 class="h3">Registrations</h2>
+      <div class="field"><label for="registrations">GST / MSME / other registrations</label><textarea id="registrations" name="registrations" rows="3"><%= s.registrations %></textarea></div>
+      <label class="switch"><input type="checkbox" name="show_registrations" value="1" <%= s.show_registrations === '1' ? 'checked' : '' %>><span class="switch-ui"></span> Show registrations on About Us page</label>
+    </section>
+    <div class="save-bar"><button class="btn btn-gold btn-lg"><%- icon('check') %> Save About Us</button></div>
+  </form>
+  <% workshop.forEach(w => { %><form id="del-ws-<%= w.id %>" method="post" action="/admin/settings/about/photo/<%= w.id %>/delete" data-confirm="Delete this workshop photo?"><input type="hidden" name="_csrf" value="<%= csrf %>"></form><% }) %>
+</div>
+<%- include('_foot') %>

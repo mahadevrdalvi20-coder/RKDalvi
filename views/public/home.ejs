@@ -1,0 +1,120 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<section class="hero">
+  <div class="hero-slides" data-slideshow>
+    <% if (heroSlides.length) { heroSlides.forEach((p, i) => { %>
+      <a class="hero-slide <%= i === 0 ? 'is-active' : '' %>" href="/work/<%= p.slug %>" aria-label="<%= p.title %>">
+        <img src="<%= media(p.cover_medium) %>" alt="<%= p.title %>" <%- i === 0 ? 'fetchpriority="high"' : 'loading="lazy"' %> decoding="async">
+        <span class="hero-caption"><span class="hc-cat"><%= p.category_name || 'Project' %></span><%= p.title %><% if (p.location) { %> · <%= p.location %><% } %></span>
+      </a>
+    <% }) } else { %>
+      <div class="hero-slide is-active hero-empty"></div>
+    <% } %>
+  </div>
+  <div class="hero-shade"></div>
+  <div class="wrap hero-content">
+    <p class="eyebrow"><%= s.tagline %></p>
+    <h1><%= s.name %></h1>
+    <p class="hero-intro"><%= s.intro %></p>
+    <div class="hero-actions">
+      <a href="/work" class="btn btn-gold btn-lg"><%- icon('grid') %> View Our Work</a>
+      <a href="<%= telLink %>" class="btn btn-light btn-lg"><%- icon('phone') %> Call Now</a>
+      <a href="<%= waLink() %>" class="btn btn-wa btn-lg" target="_blank" rel="noopener"><%- icon('whatsapp') %> WhatsApp</a>
+      <a href="/contact" class="btn btn-outline-light btn-lg"><%- icon('file') %> Get a Quote</a>
+    </div>
+  </div>
+  <% if (heroSlides.length > 1) { %>
+  <div class="hero-dots" role="tablist" aria-label="Featured projects">
+    <% heroSlides.forEach((p, i) => { %><button class="<%= i === 0 ? 'is-active' : '' %>" aria-label="Show slide <%= i + 1 %>" data-go="<%= i %>"></button><% }) %>
+  </div>
+  <% } %>
+</section>
+
+<% if (s.highlightsList.length) { %>
+<section class="highlights">
+  <div class="wrap hl-grid">
+    <% s.highlightsList.forEach(h => { %>
+      <div class="hl"><span class="hl-value"><%= h.value %></span><span class="hl-label"><%= h.label %></span></div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
+<% if (recent.length) { %>
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <div><p class="eyebrow">Portfolio</p><h2>Recent projects</h2></div>
+      <a href="/work" class="link-arrow">View all work <%- icon('arrow') %></a>
+    </div>
+    <div class="cat-chips">
+      <% categories.filter(c => c.project_count).forEach(c => { %><a class="chip" href="/work?category=<%= c.slug %>"><%= c.name %> <span><%= c.project_count %></span></a><% }) %>
+    </div>
+    <div class="pgrid">
+      <% recent.forEach(p => { %><%- include('../partials/project-card', { p }) %><% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<section class="section section-cream">
+  <div class="wrap">
+    <div class="section-head">
+      <div><p class="eyebrow">What we do</p><h2>Our services</h2></div>
+      <a href="/services" class="link-arrow">All services <%- icon('arrow') %></a>
+    </div>
+    <div class="sgrid">
+      <% services.forEach(sv => { %>
+        <a class="scard" href="/services/<%= sv.slug %>">
+          <span class="scard-icon"><%- icon(sv.icon) %></span>
+          <h3><%= sv.name %></h3>
+          <p><%= u.truncate(sv.description, 110) %></p>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="section why">
+  <div class="wrap why-grid">
+    <div>
+      <p class="eyebrow">Why clients choose us</p>
+      <h2>Built in our own workshop. Installed by our own team.</h2>
+      <p class="lead">From a single suite to a full hotel, we handle design coordination, manufacturing, finishing and on-site installation — so you deal with one accountable contractor.</p>
+      <a href="/about" class="btn btn-dark">About <%= s.name %></a>
+    </div>
+    <ul class="why-list">
+      <li><%- icon('hammer') %><div><strong>In-house manufacturing</strong><span>Quality control on every joint, edge and finish.</span></div></li>
+      <li><%- icon('building') %><div><strong>Hospitality experience</strong><span>We understand brand standards, timelines and heavy daily use.</span></div></li>
+      <li><%- icon('calendar') %><div><strong>On-time handover</strong><span>Planned production and installation schedules you can rely on.</span></div></li>
+      <li><%- icon('shield') %><div><strong>Durable materials</strong><span>Teak, marine ply, veneers and laminates chosen for long life.</span></div></li>
+    </ul>
+  </div>
+</section>
+
+<% if (testimonials.length) { %>
+<section class="section section-dark">
+  <div class="wrap">
+    <p class="eyebrow eyebrow-light">Testimonials</p>
+    <h2>What our clients say</h2>
+    <div class="tgrid">
+      <% testimonials.forEach(t => { %><%- include('../partials/testimonial', { t }) %><% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<% if (clients.length) { %>
+<section class="section section-tight">
+  <div class="wrap">
+    <p class="eyebrow center">Trusted by</p>
+    <div class="clients">
+      <% clients.forEach(c => { %><div class="client"><% if (c.logo) { %><img src="<%= media(c.logo) %>" alt="<%= c.name %>" loading="lazy"><% } else { %><span><%= c.name %></span><% } %></div><% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<%- include('../partials/cta') %>
+<%- include('../partials/footer') %>

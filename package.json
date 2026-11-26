@@ -1,0 +1,45 @@
+{
+  "name": "rkdalvi",
+  "version": "1.0.0",
+  "description": "R. K. DALVI \u2014 portfolio website, Android app (PWA/TWA) and admin panel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/*.test.js",
+    "backup": "node src/backup.js",
+    "backup:full": "node src/backup.js --full",
+    "create-admin": "node scripts/create-admin.js",
+    "seed:demo": "node scripts/seed-demo.js",
+    "icons": "node scripts/make-icons.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mahadevrdalvi20-coder/RKDalvi.git"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/mahadevrdalvi20-coder/RKDalvi/issues"
+  },
+  "homepage": "https://github.com/mahadevrdalvi20-coder/RKDalvi#readme",
+  "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.2",
+    "ejs": "^7.0.2",
+    "express": "^4.22.3",
+    "helmet": "^8.3.0",
+    "multer": "^2.5.0",
+    "nodemailer": "^10.6.1",
+    "photoswipe": "^5.4.4",
+    "sharp": "^0.35.5",
+    "sortablejs": "^1.15.7",
+    "web-push": "^4.0.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  }
+}

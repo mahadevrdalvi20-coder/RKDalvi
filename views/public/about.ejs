@@ -1,0 +1,89 @@
+<% const extraHead = '<link rel="stylesheet" href="/vendor/photoswipe/photoswipe.css">';
+   const extraScripts = '<script type="module" src="/assets/js/gallery.js"></script>'; %>
+<%- include('../partials/head', { extraHead }) %>
+<%- include('../partials/header') %>
+<section class="page-hero">
+  <div class="wrap">
+    <p class="eyebrow">About us</p>
+    <h1>Craftsmanship you can build a business on</h1>
+  </div>
+</section>
+<section class="section section-top0">
+  <div class="wrap about-grid">
+    <div class="prose">
+      <h2>Our story</h2>
+      <p class="pre"><%= s.about_story %></p>
+      <% if (s.highlightsList.length) { %>
+      <div class="hl-inline">
+        <% s.highlightsList.forEach(h => { %><div><span class="hl-value"><%= h.value %></span><span class="hl-label"><%= h.label %></span></div><% }) %>
+      </div>
+      <% } %>
+    </div>
+    <div class="owner-card">
+      <% if (s.owner_photo) { %><img src="<%= media(s.owner_photo) %>" alt="<%= s.owner_name %>" loading="lazy"><% } else { %><div class="owner-ph"><%= (s.owner_name || 'RK').split(' ').map(w => w[0]).join('').slice(0, 2) %></div><% } %>
+      <h3><%= s.owner_name %></h3>
+      <p class="owner-title"><%= s.owner_title %></p>
+      <p class="pre"><%= s.owner_bio %></p>
+    </div>
+  </div>
+</section>
+
+<% if (workshop.length) { %>
+<section class="section section-cream">
+  <div class="wrap">
+    <p class="eyebrow">Behind the scenes</p>
+    <h2>Our workshop</h2>
+    <div class="pswp-gallery gallery gallery-even">
+      <% workshop.forEach(w => { %><a class="g-item" href="<%= media(w.file) %>" data-pswp-width="2000" data-pswp-height="1500" data-autosize target="_blank" rel="noopener"><img src="<%= media(w.thumb || w.file) %>" alt="<%= w.caption || 'Workshop photo' %>" loading="lazy"></a><% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<% if (team.length) { %>
+<section class="section">
+  <div class="wrap">
+    <p class="eyebrow">People</p>
+    <h2>Our team</h2>
+    <div class="team">
+      <% team.forEach(m => { %>
+        <div class="member">
+          <% if (m.photo) { %><img src="<%= media(m.photo) %>" alt="<%= m.name %>" loading="lazy"><% } else { %><div class="avatar avatar-lg"><%= m.name.slice(0,1) %></div><% } %>
+          <strong><%= m.name %></strong><span><%= m.role %></span>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<% if (clients.length) { %>
+<section class="section section-tight">
+  <div class="wrap">
+    <h2>Major clients</h2>
+    <div class="clients">
+      <% clients.forEach(c => { %><div class="client"><% if (c.logo) { %><img src="<%= media(c.logo) %>" alt="<%= c.name %>" loading="lazy"><% } else { %><span><%= c.name %></span><% } %></div><% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<% if (testimonials.length) { %>
+<section class="section section-dark">
+  <div class="wrap">
+    <h2>Client testimonials</h2>
+    <div class="tgrid"><% testimonials.forEach(t => { %><%- include('../partials/testimonial', { t }) %><% }) %></div>
+  </div>
+</section>
+<% } %>
+
+<% if (s.show_registrations === '1' && s.registrations) { %>
+<section class="section section-tight">
+  <div class="wrap">
+    <h2 class="h3"><%- icon('award') %> Registrations</h2>
+    <p class="pre muted"><%= s.registrations %></p>
+  </div>
+</section>
+<% } %>
+<%- include('../partials/cta') %>
+<%- include('../partials/footer', { extraScripts }) %>

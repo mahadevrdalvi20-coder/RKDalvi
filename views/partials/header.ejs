@@ -1,0 +1,19 @@
+<body class="<%= typeof bodyClass !== 'undefined' ? bodyClass : '' %>">
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header" id="top">
+  <div class="wrap header-in">
+    <a class="brand" href="/" aria-label="<%= s.name %> home">
+      <% if (s.logo) { %><img src="<%= media(s.logo) %>" alt="" class="brand-logo"><% } else { %><span class="brand-mark" aria-hidden="true">RK</span><% } %>
+      <span class="brand-text"><span class="brand-name"><%= s.name %></span><span class="brand-tag"><%= s.tagline %></span></span>
+    </a>
+    <nav class="main-nav" id="main-nav" aria-label="Main">
+      <% [['/', 'Home'], ['/work', 'Our Work'], ['/services', 'Services'], ['/about', 'About Us'], ['/contact', 'Contact']].forEach(([href, label]) => {
+        const active = href === '/' ? path === '/' : path.startsWith(href); %>
+        <a href="<%= href %>" class="<%= active ? 'active' : '' %>" <%- active ? 'aria-current="page"' : '' %>><%= label %></a>
+      <% }) %>
+      <a href="/contact" class="btn btn-gold nav-cta">Get a Quote</a>
+    </nav>
+    <button class="nav-toggle" aria-controls="main-nav" aria-expanded="false" aria-label="Open menu"><%- icon('menu') %></button>
+  </div>
+</header>
+<main id="main">

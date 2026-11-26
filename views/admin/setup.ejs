@@ -1,0 +1,17 @@
+<%- include('_head', { bare: true }) %>
+<div class="auth">
+  <div class="auth-card">
+    <%- include('_auth') %>
+    <h1>Welcome! Create the owner account</h1>
+    <p class="muted">This is a one-time step. After this, only admins you add can log in.</p>
+    <% if (error) { %><div class="flash flash-error" role="alert"><%= error %></div><% } %>
+    <form method="post" action="/admin/setup" class="form">
+      <div class="field"><label for="name">Your name</label><input id="name" name="name" required value="<%= values.name || '' %>" autocomplete="name"></div>
+      <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required value="<%= values.email || '' %>" autocomplete="email"></div>
+      <div class="field"><label for="mobile">Mobile <span class="opt">(for OTP login, optional)</span></label><div class="input-prefix"><span>+91</span><input id="mobile" name="mobile" type="tel" inputmode="numeric" value="<%= values.mobile || '' %>"></div></div>
+      <div class="field"><label for="password">Password <span class="opt">(at least 8 characters)</span></label><input id="password" name="password" type="password" minlength="8" required autocomplete="new-password"></div>
+      <button class="btn btn-gold btn-lg btn-block">Create account</button>
+    </form>
+  </div>
+</div>
+<%- include('_foot') %>

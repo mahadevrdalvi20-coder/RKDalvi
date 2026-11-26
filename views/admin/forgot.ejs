@@ -1,0 +1,20 @@
+<%- include('_head', { bare: true }) %>
+<div class="auth">
+  <div class="auth-card">
+    <%- include('_auth') %>
+    <h1>Forgot password</h1>
+    <% if (error) { %><div class="flash flash-error"><%= error %></div><% } %>
+    <% if (sent) { %>
+      <div class="flash flash-success">If this email belongs to an admin, we have sent a password reset link. Please check your inbox (and spam folder). The link is valid for 1 hour.</div>
+      <p class="center"><a href="/admin/login">Back to login</a></p>
+    <% } else { %>
+      <p class="muted">Enter your admin email and we’ll send you a link to set a new password.</p>
+      <form method="post" action="/admin/forgot" class="form">
+        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required autofocus></div>
+        <button class="btn btn-dark btn-lg btn-block">Send reset link</button>
+        <p class="center"><a href="/admin/login">Back to login</a></p>
+      </form>
+    <% } %>
+  </div>
+</div>
+<%- include('_foot') %>

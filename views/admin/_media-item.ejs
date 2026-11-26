@@ -1,0 +1,21 @@
+<li class="mi <%= isCover ? 'is-cover' : '' %>" data-id="<%= m.id %>" data-kind="<%= m.kind %>">
+  <div class="mi-img">
+    <% if (m.kind === 'video') { %>
+      <% if (m.thumb) { %><img src="<%= media(m.thumb) %>" alt=""><% } else { %><div class="mi-vid"></div><% } %><span class="mi-play"><%- icon('play') %></span>
+    <% } else { %><img src="<%= m.thumb ? media(m.thumb) : '' %>" alt="" loading="lazy"><% } %>
+    <span class="mi-handle" title="Drag to reorder"><%- icon('drag') %></span>
+    <span class="mi-cover-badge">Cover</span>
+  </div>
+  <div class="mi-body">
+    <input type="text" class="mi-caption" placeholder="Caption (optional)" value="<%= m.caption %>" maxlength="200" aria-label="Caption">
+    <div class="mi-row">
+      <select class="mi-tag" aria-label="Photo type" <%= m.kind === 'video' ? 'hidden' : '' %>>
+        <option value="normal" <%= m.tag === 'normal' ? 'selected' : '' %>>Normal</option>
+        <option value="before" <%= m.tag === 'before' ? 'selected' : '' %>>Before</option>
+        <option value="after" <%= m.tag === 'after' ? 'selected' : '' %>>After</option>
+      </select>
+      <button type="button" class="iconbtn mi-cover" title="Set as cover photo" aria-label="Set as cover" <%= m.kind === 'video' ? 'hidden' : '' %>><%- icon('star') %></button>
+      <button type="button" class="iconbtn mi-del" title="Delete" aria-label="Delete"><%- icon('trash') %></button>
+    </div>
+  </div>
+</li>

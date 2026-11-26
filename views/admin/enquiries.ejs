@@ -1,0 +1,34 @@
+<%- include('_head') %>
+<div class="a-page">
+  <div class="a-head">
+    <h1>Enquiries</h1>
+    <a class="btn btn-ghost" href="/admin/enquiries.csv?status=<%= status %>&q=<%= encodeURIComponent(q) %>"><%- icon('download') %> Export to Excel (CSV)</a>
+  </div>
+  <form class="a-filters" method="get">
+    <div class="search-box"><%- icon('search') %><input type="search" name="q" value="<%= q %>" placeholder="Search name, mobile, city, service" aria-label="Search enquiries"><% if (status) { %><input type="hidden" name="status" value="<%= status %>"><% } %></div>
+    <div class="seg seg-scroll">
+      <a href="?<%= q ? 'q=' + encodeURIComponent(q) : '' %>" class="<%= !status ? 'active' : '' %>">All <span><%= counts.all %></span></a>
+      <% STATUSES.forEach(st => { %><a href="?status=<%= st.key %><%= q ? '&q=' + encodeURIComponent(q) : '' %>" class="<%= status === st.key ? 'active' : '' %>"><%= st.label %> <span><%= counts[st.key] %></span></a><% }) %>
+    </div>
+  </form>
+  <% if (!rows.length) { %>
+    <div class="empty"><%- icon('inbox') %><h2>No enquiries <%= status || q ? 'found' : 'yet' %></h2><p>New enquiries from the website and app will appear here instantly.</p></div>
+  <% } else { %>
+  <ul class="elist">
+    <% rows.forEach(e => { %>
+      <li class="eitem <%= e.status === 'new' ? 'is-new' : '' %>">
+        <a href="/admin/enquiries/<%= e.id %>" class="eitem-main">
+          <span class="eitem-top"><strong><%= e.name %></strong><span class="badge badge-<%= e.status %>"><%= statusLabel(e.status) %></span></span>
+          <span class="eitem-sub"><%= e.service %> · <%= e.city %> · <%= e.client_type %><% if (e.file_count) { %> · 📎 <%= e.file_count %><% } %></span>
+          <span class="eitem-date"><%= u.fmtDateTime(e.created_at) %></span>
+        </a>
+        <div class="eitem-actions">
+          <a class="iconbtn call" href="tel:+91<%= e.mobile %>" aria-label="Call <%= e.name %>"><%- icon('phone') %></a>
+          <a class="iconbtn wa" href="<%= u.waLink(e.mobile, `Hello ${e.name}, this is ${s.name}. Thank you for your enquiry about ${e.service}.`) %>" target="_blank" rel="noopener" aria-label="WhatsApp <%= e.name %>"><%- icon('whatsapp') %></a>
+        </div>
+      </li>
+    <% }) %>
+  </ul>
+  <% } %>
+</div>
+<%- include('_foot') %>

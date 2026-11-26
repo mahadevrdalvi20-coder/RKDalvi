@@ -1,0 +1,39 @@
+<%- include('_head') %>
+<div class="a-page">
+  <%- include('_settings-nav') %>
+  <section class="a-card">
+    <h2 class="h3">People who can log in</h2>
+    <ul class="list">
+      <% admins.forEach(a => { %>
+        <li class="list-row">
+          <span class="avatar"><%= a.name.slice(0, 1) %></span>
+          <span class="list-main"><strong><%= a.name %><%= a.id === admin.id ? ' (you)' : '' %></strong><small><%= a.email %><%= a.mobile ? ' · +91 ' + a.mobile : '' %> · <%= a.role === 'owner' ? 'Owner' : 'Admin' %><%= a.active ? '' : ' · DISABLED' %></small><small>Last login: <%= a.last_login ? u.fmtDateTime(a.last_login) : 'never' %></small></span>
+          <% if (admin.role === 'owner' && a.role !== 'owner') { %>
+            <span class="list-side row-actions">
+              <form method="post" action="/admin/settings/admins/<%= a.id %>"><input type="hidden" name="_csrf" value="<%= csrf %>"><button name="action" value="toggle" class="btn btn-ghost btn-sm"><%= a.active ? 'Disable' : 'Enable' %></button></form>
+              <form method="post" action="/admin/settings/admins/<%= a.id %>" data-confirm="Remove <%= a.name %>? They will no longer be able to log in."><input type="hidden" name="_csrf" value="<%= csrf %>"><button name="action" value="remove" class="btn btn-danger btn-sm">Remove</button></form>
+            </span>
+          <% } %>
+        </li>
+      <% }) %>
+    </ul>
+  </section>
+  <% if (admin.role === 'owner') { %>
+  <section class="a-card">
+    <h2 class="h3">Add another admin</h2>
+    <p class="muted">For example a family member or manager. They can manage projects and enquiries, but cannot add or remove admins.</p>
+    <% if (error) { %><div class="flash flash-error"><%= error %></div><% } %>
+    <form method="post" action="/admin/settings/admins" class="form">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <div class="grid-2">
+        <div class="field"><label for="a-name">Name</label><input id="a-name" name="name" required value="<%= values.name || '' %>"></div>
+        <div class="field"><label for="a-email">Email</label><input id="a-email" name="email" type="email" required value="<%= values.email || '' %>"></div>
+        <div class="field"><label for="a-mobile">Mobile <span class="opt">(optional, for OTP login)</span></label><input id="a-mobile" name="mobile" type="tel" value="<%= values.mobile || '' %>"></div>
+        <div class="field"><label for="a-pw">Temporary password <span class="opt">(min 8 characters)</span></label><input id="a-pw" name="password" type="text" minlength="8" required autocomplete="off"></div>
+      </div>
+      <button class="btn btn-dark"><%- icon('plus') %> Add admin</button>
+    </form>
+  </section>
+  <% } %>
+</div>
+<%- include('_foot') %>

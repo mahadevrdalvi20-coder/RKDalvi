@@ -1,0 +1,40 @@
+<%- include('_head', { bare: true }) %>
+<div class="auth">
+  <div class="auth-card">
+    <%- include('_auth') %>
+    <h1>Log in</h1>
+    <% if (info) { %><div class="flash flash-info"><%= info %></div><% } %>
+    <% if (error) { %><div class="flash flash-error" role="alert"><%= error %></div><% } %>
+    <% if (config.otpEnabled) { %>
+    <div class="seg" role="tablist">
+      <a href="/admin/login?next=<%= encodeURIComponent(next) %>" class="<%= mode === 'password' ? 'active' : '' %>">Email &amp; password</a>
+      <a href="/admin/login?mode=otp&next=<%= encodeURIComponent(next) %>" class="<%= mode === 'otp' ? 'active' : '' %>">Mobile OTP</a>
+    </div>
+    <% } %>
+    <% if (mode === 'password') { %>
+      <form method="post" action="/admin/login" class="form">
+        <input type="hidden" name="next" value="<%= next %>">
+        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="username" required value="<%= values.email || '' %>" autofocus></div>
+        <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>
+        <button class="btn btn-dark btn-lg btn-block">Log in</button>
+        <p class="center"><a href="/admin/forgot">Forgot password?</a></p>
+      </form>
+    <% } else if (!otpSent) { %>
+      <form method="post" action="/admin/otp/send" class="form">
+        <input type="hidden" name="next" value="<%= next %>">
+        <div class="field"><label for="mobile">Registered mobile number</label><div class="input-prefix"><span>+91</span><input id="mobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel-national" required value="<%= values.mobile || '' %>" autofocus></div></div>
+        <button class="btn btn-dark btn-lg btn-block">Send OTP</button>
+      </form>
+    <% } else { %>
+      <form method="post" action="/admin/otp/verify" class="form">
+        <input type="hidden" name="next" value="<%= next %>">
+        <input type="hidden" name="mobile" value="<%= values.mobile %>">
+        <div class="field"><label for="code">6-digit code sent to +91 <%= values.mobile %></label><input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required autofocus class="otp-input"></div>
+        <button class="btn btn-dark btn-lg btn-block">Verify &amp; log in</button>
+        <p class="center"><a href="/admin/login?mode=otp">Use a different number / resend</a></p>
+      </form>
+    <% } %>
+    <p class="center small"><a href="/">← Back to website</a></p>
+  </div>
+</div>
+<%- include('_foot') %>

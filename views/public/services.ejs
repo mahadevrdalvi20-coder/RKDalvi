@@ -1,0 +1,30 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="page-hero">
+  <div class="wrap">
+    <p class="eyebrow">Services</p>
+    <h1>What we do</h1>
+    <p class="lead">Complete furniture and interior solutions for hospitality, commercial and residential spaces — designed, manufactured in our workshop and installed by our team.</p>
+  </div>
+</section>
+<section class="section section-top0">
+  <div class="wrap svc-list">
+    <% services.forEach((sv, i) => { %>
+      <article class="svc-row" id="<%= sv.slug %>">
+        <div class="svc-media">
+          <% if (sv.image) { %><img src="<%= media(sv.image) %>" alt="<%= sv.name %>" loading="lazy"><% } else { %><span class="svc-icon-lg"><%- icon(sv.icon) %></span><% } %>
+        </div>
+        <div class="svc-text">
+          <h2><%= sv.name %></h2>
+          <p><%= sv.description %></p>
+          <div class="svc-actions">
+            <% if (sv.project_count) { %><a href="/services/<%= sv.slug %>" class="btn btn-dark">See <%= sv.project_count %> related project<%= sv.project_count === 1 ? '' : 's' %></a><% } else { %><a href="/services/<%= sv.slug %>" class="btn btn-dark">Learn more</a><% } %>
+            <a href="/contact?service=<%= sv.slug %>" class="btn btn-ghost">Get a quote</a>
+          </div>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+</section>
+<%- include('../partials/cta') %>
+<%- include('../partials/footer') %>

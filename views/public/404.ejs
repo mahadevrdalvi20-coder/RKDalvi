@@ -1,0 +1,10 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="section">
+  <div class="wrap narrow center">
+    <h1><%= typeof serverError !== 'undefined' ? 'Something went wrong' : 'Page not found' %></h1>
+    <p class="lead"><%= typeof serverError !== 'undefined' ? 'Please try again in a moment.' : 'The page you are looking for may have been moved or removed.' %></p>
+    <div class="hero-actions-inline center"><a href="/" class="btn btn-dark">Go to home</a><a href="/work" class="btn btn-ghost">See our work</a></div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

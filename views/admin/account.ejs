@@ -1,0 +1,31 @@
+<%- include('_head') %>
+<div class="a-page">
+  <%- include('_settings-nav') %>
+  <% if (error) { %><div class="flash flash-error"><%= error %></div><% } %>
+  <form method="post" action="/admin/settings/account" class="form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <section class="a-card">
+      <h2 class="h3">Profile</h2>
+      <div class="grid-2">
+        <div class="field"><label for="name">Name</label><input id="name" name="name" required value="<%= admin.name %>"></div>
+        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required value="<%= admin.email %>"></div>
+        <div class="field"><label for="mobile">Mobile <span class="opt">(for OTP login)</span></label><input id="mobile" name="mobile" type="tel" value="<%= admin.mobile || '' %>"></div>
+      </div>
+      <label class="switch"><input type="checkbox" name="notify_email" value="1" <%= admin.notify_email ? 'checked' : '' %>><span class="switch-ui"></span> Email me when a new enquiry arrives</label>
+    </section>
+    <section class="a-card">
+      <h2 class="h3">Change password</h2>
+      <div class="grid-2">
+        <div class="field"><label for="current_password">Current password</label><input id="current_password" name="current_password" type="password" autocomplete="current-password"></div>
+        <div class="field"><label for="new_password">New password</label><input id="new_password" name="new_password" type="password" minlength="8" autocomplete="new-password"></div>
+      </div>
+    </section>
+    <div class="save-bar"><button class="btn btn-gold btn-lg">Save</button></div>
+  </form>
+  <section class="a-card">
+    <h2 class="h3">Security</h2>
+    <p class="muted">You are logged out automatically after <%= config.sessionIdleMinutes %> minutes without activity.</p>
+    <form method="post" action="/admin/settings/account/logout-all" data-confirm="Log out from all phones and computers?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost">Log out of all devices</button></form>
+  </section>
+</div>
+<%- include('_foot') %>

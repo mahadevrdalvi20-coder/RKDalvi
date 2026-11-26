@@ -1,0 +1,27 @@
+{
+  "packageId": "com.rkdalvi.app",
+  "host": "rkdalvi.com",
+  "name": "R. K. DALVI",
+  "launcherName": "RK Dalvi",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#4a2e1b",
+  "navigationColor": "#2b1a0f",
+  "backgroundColor": "#f7f1e8",
+  "enableNotifications": true,
+  "startUrl": "/?source=app",
+  "iconUrl": "https://rkdalvi.com/assets/img/icon-512.png",
+  "maskableIconUrl": "https://rkdalvi.com/assets/img/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": { "path": "./android.keystore", "alias": "rkdalvi" },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    { "name": "Our Work", "shortName": "Work", "url": "/work?source=app", "chosenIconUrl": "https://rkdalvi.com/assets/img/icon-192.png" },
+    { "name": "Get a Quote", "shortName": "Quote", "url": "/contact?source=app", "chosenIconUrl": "https://rkdalvi.com/assets/img/icon-192.png" }
+  ],
+  "minSdkVersion": 21,
+  "fallbackType": "customtabs",
+  "features": {},
+  "webManifestUrl": "https://rkdalvi.com/manifest.webmanifest"
+}

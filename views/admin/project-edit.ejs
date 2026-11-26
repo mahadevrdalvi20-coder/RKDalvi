@@ -1,0 +1,83 @@
+<% const extraScripts = '<script src="/vendor/sortable/Sortable.min.js" defer></script><script src="/assets/js/admin-project.js" defer></script>'; %>
+<%- include('_head') %>
+<div class="a-page">
+  <div class="a-head">
+    <div>
+      <a href="/admin/projects" class="back"><%- icon('back') %> Projects</a>
+      <h1 class="h-edit"><%= p.title %></h1>
+      <span class="badge badge-<%= p.status %>"><%= { published: 'Live on website', draft: 'Draft — not visible', hidden: 'Hidden from visitors' }[p.status] %></span>
+      <% if (p.featured) { %><span class="badge badge-featured">★ Featured on Home</span><% } %>
+    </div>
+    <a href="/work/<%= p.slug %>" target="_blank" rel="noopener" class="btn btn-ghost"><%- icon('eye') %> <%= p.status === 'published' ? 'View live' : 'Preview' %></a>
+  </div>
+
+  <section class="a-card" id="photos">
+    <div class="a-card-head">
+      <h2 class="h3">1. Photos &amp; videos</h2>
+      <span class="muted small" data-media-count><%= items.length %> items</span>
+    </div>
+    <div class="upload-bar">
+      <label class="btn btn-gold btn-lg upload-btn"><%- icon('image') %> Choose photos / videos<input type="file" accept="image/*,video/mp4,video/webm,video/quicktime,video/3gpp" multiple data-upload hidden></label>
+      <label class="btn btn-dark btn-lg upload-btn"><%- icon('camera') %> Take photo<input type="file" accept="image/*" capture="environment" data-upload hidden></label>
+      <label class="check"><input type="checkbox" data-watermark <%= watermarkDefault ? 'checked' : '' %>> Add “<%= s.name %>” watermark</label>
+    </div>
+    <p class="hint">Pick many photos at once. They are compressed automatically and keep full quality for full-screen view. Videos up to <%= maxVideoMB %> MB. Drag <%- icon('drag') %> to reorder; the ★ photo is the cover.</p>
+    <div class="upload-queue" data-queue hidden>
+      <div class="uq-head"><strong data-uq-title>Uploading…</strong><button type="button" class="linkbtn" data-retry-all hidden><%- icon('refresh') %> Retry failed</button></div>
+      <div class="progress"><span data-uq-bar></span></div>
+      <ul data-uq-list></ul>
+    </div>
+    <ul class="media-grid" data-media-grid data-project="<%= p.id %>" data-cover="<%= p.cover_media_id || '' %>">
+      <% const firstPhoto = items.find(x => x.kind === 'photo'); items.forEach(m => { %><%- include('_media-item', { m, isCover: p.cover_media_id ? p.cover_media_id === m.id : (firstPhoto && firstPhoto.id === m.id) }) %><% }) %>
+    </ul>
+    <template id="media-item-tpl"><%- include('_media-item', { m: { id: 0, kind: 'photo', thumb: '', file: '', caption: '', tag: 'normal' }, isCover: false }) %></template>
+  </section>
+
+  <form method="post" action="/admin/projects/<%= p.id %>" class="a-card form" id="project-form">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <h2 class="h3">2. Project details</h2>
+    <div class="field"><label for="title">Project title <span class="req">*</span></label><input id="title" name="title" required maxlength="140" value="<%= p.title === 'New project' ? '' : p.title %>" placeholder="e.g. The Grand Hotel — 40 guest rooms"></div>
+    <div class="grid-2">
+      <div class="field"><label for="category_id">Category</label>
+        <select id="category_id" name="category_id"><option value="">— Choose —</option><% categories.forEach(c => { %><option value="<%= c.id %>" <%= p.category_id === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select>
+      </div>
+      <div class="field"><label for="location">Location</label><input id="location" name="location" maxlength="120" value="<%= p.location %>" placeholder="e.g. Panaji, Goa"></div>
+      <div class="field"><label for="year">Year of completion</label><input id="year" name="year" type="number" inputmode="numeric" min="1950" max="2100" value="<%= p.year || '' %>"></div>
+      <div class="field"><label for="duration">Duration</label><input id="duration" name="duration" maxlength="100" value="<%= p.duration %>" placeholder="e.g. 3 months"></div>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label for="client_name">Client name</label><input id="client_name" name="client_name" maxlength="120" value="<%= p.client_name %>"></div>
+      <div class="field field-switch"><label class="switch"><input type="checkbox" name="show_client" value="1" <%= p.show_client ? 'checked' : '' %>><span class="switch-ui"></span> Show client name publicly <span class="opt">(only with client’s permission)</span></label></div>
+    </div>
+    <div class="field"><label for="description">Description of work done</label><textarea id="description" name="description" rows="6" maxlength="6000" placeholder="Scope of work, what was made, special features…"><%= p.description %></textarea></div>
+    <div class="grid-2">
+      <div class="field"><label for="materials">Materials used <span class="opt">(comma separated)</span></label><input id="materials" name="materials" maxlength="500" value="<%= p.materials %>" placeholder="Teak, Plywood, Veneer, Laminate"></div>
+      <div class="field"><label for="pieces">Number of rooms / pieces</label><input id="pieces" name="pieces" maxlength="200" value="<%= p.pieces %>" placeholder="e.g. 40 rooms, 2 suites"></div>
+    </div>
+    <div class="field"><label for="tags">Tags <span class="opt">(help visitors find it in search)</span></label><input id="tags" name="tags" maxlength="300" value="<%= p.tags %>" placeholder="lobby, reception, resort"></div>
+    <fieldset class="field"><legend>Services in this project</legend>
+      <div class="pills"><% services.forEach(sv => { %><label class="pill"><input type="checkbox" name="services" value="<%= sv.id %>" <%= selectedServices.includes(sv.id) ? 'checked' : '' %>><span><%= sv.name %></span></label><% }) %></div>
+    </fieldset>
+    <div class="field"><label class="switch"><input type="checkbox" name="featured" value="1" <%= p.featured ? 'checked' : '' %>><span class="switch-ui"></span> ★ Featured — show in the Home page banner</label></div>
+
+    <div class="save-bar">
+      <% if (p.status === 'published') { %>
+        <button name="action" value="save" class="btn btn-gold btn-lg"><%- icon('check') %> Save changes</button>
+        <button name="action" value="hide" class="btn btn-ghost">Hide</button>
+      <% } else { %>
+        <button name="action" value="publish" class="btn btn-gold btn-lg"><%- icon('check') %> Publish</button>
+        <button name="action" value="draft" class="btn btn-ghost">Save as draft</button>
+      <% } %>
+    </div>
+  </form>
+
+  <section class="a-card danger-zone">
+    <h2 class="h3">Delete project</h2>
+    <p class="muted">This permanently removes the project and all its photos. To only take it off the website, use <strong>Hide</strong> instead.</p>
+    <form method="post" action="/admin/projects/<%= p.id %>/delete" data-confirm="Delete “<%= p.title %>” and all <%= items.length %> photos/videos permanently? This cannot be undone.">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <button class="btn btn-danger"><%- icon('trash') %> Delete project</button>
+    </form>
+  </section>
+</div>
+<%- include('_foot', { extraScripts }) %>

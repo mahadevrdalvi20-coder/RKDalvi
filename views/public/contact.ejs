@@ -1,0 +1,127 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<% const err = (k) => errors[k] ? `<p class="field-error" id="err-${k}">${errors[k].replace(/[<>&]/g, '')}</p>` : '';
+   const inv = (k) => errors[k] ? `aria-invalid="true" aria-describedby="err-${k}"` : ''; %>
+<section class="page-hero">
+  <div class="wrap">
+    <p class="eyebrow">Contact</p>
+    <h1>Get a Quote</h1>
+    <p class="lead">Tell us about your project. We usually reply within one working day — or call / WhatsApp us right now.</p>
+    <div class="hero-actions-inline">
+      <a href="<%= telLink %>" class="btn btn-dark"><%- icon('phone') %> Call <%= s.phone %></a>
+      <a href="<%= waLink() %>" class="btn btn-wa" target="_blank" rel="noopener"><%- icon('whatsapp') %> WhatsApp</a>
+      <% if (s.email) { %><a href="mailto:<%= s.email %>?subject=<%= encodeURIComponent('Project enquiry') %>" class="btn btn-ghost"><%- icon('mail') %> Email</a><% } %>
+    </div>
+  </div>
+</section>
+
+<section class="section section-top0">
+  <div class="wrap contact-grid">
+    <form class="card form enquiry-form" method="post" action="/contact" enctype="multipart/form-data" novalidate>
+      <h2 class="h3">Enquiry form</h2>
+      <% if (errors.form) { %><div class="alert alert-error"><%= errors.form %></div><% } else if (Object.keys(errors).length) { %><div class="alert alert-error" role="alert">Please check the highlighted fields.</div><% } %>
+      <% if (project) { %>
+        <div class="enq-project">
+          <% if (project.cover_thumb) { %><img src="<%= media(project.cover_thumb) %>" alt=""><% } %>
+          <div><small>Enquiring about a project similar to</small><strong><%= project.title %></strong></div>
+        </div>
+        <input type="hidden" name="project" value="<%= project.slug %>">
+      <% } %>
+      <input type="hidden" name="stamp" value="<%= stamp %>">
+      <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label for="f-name">Full name <span class="req">*</span></label>
+          <input id="f-name" name="name" type="text" autocomplete="name" required maxlength="100" value="<%= values.name || '' %>" <%- inv('name') %>>
+          <%- err('name') %>
+        </div>
+        <div class="field">
+          <label for="f-mobile">Mobile number <span class="req">*</span></label>
+          <div class="input-prefix"><span>+91</span><input id="f-mobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel-national" required maxlength="14" pattern="[0-9 ]{10,14}" placeholder="10-digit mobile" value="<%= values.mobile || '' %>" <%- inv('mobile') %>></div>
+          <%- err('mobile') %>
+        </div>
+        <div class="field">
+          <label for="f-email">Email <span class="opt">(optional)</span></label>
+          <input id="f-email" name="email" type="email" autocomplete="email" maxlength="120" value="<%= values.email || '' %>" <%- inv('email') %>>
+          <%- err('email') %>
+        </div>
+        <div class="field">
+          <label for="f-city">Project location (city) <span class="req">*</span></label>
+          <input id="f-city" name="city" type="text" autocomplete="address-level2" required maxlength="80" value="<%= values.city || '' %>" <%- inv('city') %>>
+          <%- err('city') %>
+        </div>
+      </div>
+
+      <fieldset class="field">
+        <legend>You are a <span class="req">*</span></legend>
+        <div class="pills" <%- inv('client_type') %>>
+          <% s.clientTypes.forEach(ct => { %>
+            <label class="pill"><input type="radio" name="client_type" value="<%= ct %>" required <%= values.client_type === ct ? 'checked' : '' %>><span><%= ct %></span></label>
+          <% }) %>
+        </div>
+        <%- err('client_type') %>
+      </fieldset>
+
+      <div class="grid-2">
+        <div class="field">
+          <label for="f-service">Service needed <span class="req">*</span></label>
+          <select id="f-service" name="service" required <%- inv('service') %>>
+            <option value="">Choose a service…</option>
+            <% services.forEach(sv => { %><option <%= values.service === sv.name ? 'selected' : '' %>><%= sv.name %></option><% }) %>
+            <option <%= values.service === 'Other / Not sure' ? 'selected' : '' %>>Other / Not sure</option>
+          </select>
+          <%- err('service') %>
+        </div>
+        <div class="field">
+          <label for="f-budget">Approximate budget <span class="opt">(optional)</span></label>
+          <select id="f-budget" name="budget">
+            <option value="">Prefer not to say</option>
+            <% s.budgetRanges.forEach(b => { %><option <%= values.budget === b ? 'selected' : '' %>><%= b %></option><% }) %>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-start">Expected start <span class="opt">(optional)</span></label>
+          <input id="f-start" name="start_date" type="month" value="<%= values.start_date || '' %>" min="<%= new Date().toISOString().slice(0,7) %>" <%- inv('start_date') %>>
+          <%- err('start_date') %>
+        </div>
+        <div class="field">
+          <label for="f-files">Reference photos / drawings <span class="opt">(up to 5, optional)</span></label>
+          <input id="f-files" name="attachments" type="file" accept="image/*,application/pdf" multiple data-max-files="5" <%- inv('attachments') %>>
+          <p class="hint" data-file-hint>JPG, PNG or PDF · max 10 MB each</p>
+          <%- err('attachments') %>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-message">Message / requirements <span class="opt">(optional)</span></label>
+        <textarea id="f-message" name="message" rows="5" maxlength="4000" placeholder="e.g. 40 hotel rooms — beds, wardrobes and TV units; lobby reception counter…"><%= values.message || '' %></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-gold btn-lg btn-block" data-submit>Send enquiry</button>
+      <p class="hint center">We respect your privacy — your details are only used to reply to your enquiry. <a href="/privacy">Privacy policy</a></p>
+    </form>
+
+    <aside class="contact-side">
+      <div class="card contact-card">
+        <h2 class="h3">Reach us directly</h2>
+        <a class="contact-line" href="<%= telLink %>"><%- icon('phone') %><span><small>Call</small><%= s.phone %></span></a>
+        <a class="contact-line" href="<%= waLink() %>" target="_blank" rel="noopener"><%- icon('whatsapp') %><span><small>WhatsApp</small>Chat with us</span></a>
+        <% if (s.email) { %><a class="contact-line" href="mailto:<%= s.email %>"><%- icon('mail') %><span><small>Email</small><%= s.email %></span></a><% } %>
+        <div class="contact-line"><%- icon('pin') %><span><small>Office / workshop</small><%= s.address %></span></div>
+        <a href="<%= mapsLink %>" target="_blank" rel="noopener" class="btn btn-dark btn-block"><%- icon('pin') %> Get directions on Google Maps</a>
+        <div class="contact-line"><%- icon('clock') %><span><small>Working hours</small><span class="pre"><%= s.hours %></span></span></div>
+        <div class="social social-dark">
+          <% if (s.instagram) { %><a href="<%= s.instagram %>" target="_blank" rel="noopener" aria-label="Instagram"><%- icon('instagram') %></a><% } %>
+          <% if (s.facebook) { %><a href="<%= s.facebook %>" target="_blank" rel="noopener" aria-label="Facebook"><%- icon('facebook') %></a><% } %>
+          <% if (s.google_business) { %><a href="<%= s.google_business %>" target="_blank" rel="noopener" aria-label="Google Business profile"><%- icon('google') %></a><% } %>
+          <% if (s.youtube) { %><a href="<%= s.youtube %>" target="_blank" rel="noopener" aria-label="YouTube"><%- icon('youtube') %></a><% } %>
+        </div>
+      </div>
+      <div class="map-embed">
+        <iframe title="Map to <%= s.name %>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<%= encodeURIComponent(s.map_query || s.address) %>&output=embed"></iframe>
+      </div>
+    </aside>
+  </div>
+</section>
+<%- include('../partials/footer') %>

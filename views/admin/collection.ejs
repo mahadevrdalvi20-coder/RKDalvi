@@ -1,0 +1,32 @@
+<%- include('_head') %>
+<div class="a-page">
+  <%- include('_settings-nav') %>
+  <p class="muted"><%= c.help %></p>
+  <details class="a-card add-card" <%= rows.length ? '' : 'open' %>>
+    <summary class="btn btn-gold"><%- icon('plus') %> Add <%= c.singular %></summary>
+    <form method="post" action="/admin/settings/<%= key %>?_csrf=<%= csrf %>" enctype="multipart/form-data" class="form mt">
+      <%- include('_coll-fields', { c, row: null, prefix: 'new' }) %>
+      <button class="btn btn-dark">Add <%= c.singular %></button>
+    </form>
+  </details>
+  <% if (!rows.length) { %><p class="muted">Nothing added yet.</p><% } %>
+  <div class="coll-list">
+    <% rows.forEach(r => { %>
+      <details class="a-card coll-item" id="row-<%= r.id %>">
+        <summary>
+          <% const img = c.fields.find(f => f.type === 'image'); if (img && r[img.name]) { %><img src="<%= media(r[img.name]) %>" alt="" class="coll-thumb"><% } else if (r.icon) { %><span class="coll-ic"><%- icon(r.icon) %></span><% } %>
+          <span class="coll-title"><strong><%= r.name || r.client_name %></strong><small><%= r.role || r.business || (r.slug ? '/' + r.slug : '') %><%= r.visible === 0 ? ' · hidden' : '' %></small></span>
+          <%- icon('edit') %>
+        </summary>
+        <form method="post" action="/admin/settings/<%= key %>/<%= r.id %>?_csrf=<%= csrf %>" enctype="multipart/form-data" class="form mt">
+          <%- include('_coll-fields', { c, row: r, prefix: 'r' + r.id }) %>
+          <div class="save-bar">
+            <button class="btn btn-dark">Save</button>
+            <button class="btn btn-danger btn-sm" name="_delete" value="1" data-confirm-btn="<%= c.deleteWarning || 'Delete this ' + c.singular + '?' %>"><%- icon('trash') %> Delete</button>
+          </div>
+        </form>
+      </details>
+    <% }) %>
+  </div>
+</div>
+<%- include('_foot') %>

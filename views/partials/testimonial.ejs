@@ -1,0 +1,8 @@
+<figure class="tcard">
+  <div class="stars" aria-label="<%= t.rating %> out of 5 stars"><% for (let i = 0; i < 5; i++) { %><%- icon(i < t.rating ? 'star_fill' : 'star') %><% } %></div>
+  <blockquote><%= t.text %></blockquote>
+  <figcaption>
+    <% if (t.photo) { %><img src="<%= media(t.photo) %>" alt="" loading="lazy"><% } else { %><span class="avatar"><%= t.client_name.slice(0,1) %></span><% } %>
+    <span><strong><%= t.client_name %></strong><% if (t.business) { %><br><small><%= t.business %></small><% } %></span>
+  </figcaption>
+</figure>

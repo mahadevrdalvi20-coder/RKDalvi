@@ -1,0 +1,16 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="section thanks">
+  <div class="wrap narrow center">
+    <div class="thanks-icon"><%- icon('check') %></div>
+    <h1>Thank you<%= firstName ? ', ' + firstName : '' %>!</h1>
+    <p class="lead">We have received your enquiry. Our team will contact you shortly — usually within one working day.</p>
+    <p>Need a faster reply? Call or WhatsApp us now.</p>
+    <div class="hero-actions-inline center">
+      <a href="<%= telLink %>" class="btn btn-dark"><%- icon('phone') %> Call now</a>
+      <a href="<%= waLink() %>" class="btn btn-wa" target="_blank" rel="noopener"><%- icon('whatsapp') %> WhatsApp</a>
+      <a href="/work" class="btn btn-ghost">Browse more work</a>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

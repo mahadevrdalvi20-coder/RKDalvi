@@ -1,0 +1,19 @@
+<%- include('_head', { bare: true }) %>
+<div class="auth">
+  <div class="auth-card">
+    <%- include('_auth') %>
+    <h1>Set a new password</h1>
+    <% if (!ok) { %>
+      <div class="flash flash-error">This link is invalid or has expired.</div>
+      <p class="center"><a href="/admin/forgot">Request a new link</a></p>
+    <% } else { %>
+      <% if (error) { %><div class="flash flash-error"><%= error %></div><% } %>
+      <form method="post" action="/admin/reset/<%= token %>" class="form">
+        <div class="field"><label for="password">New password</label><input id="password" name="password" type="password" minlength="8" required autocomplete="new-password"></div>
+        <div class="field"><label for="confirm">Confirm new password</label><input id="confirm" name="confirm" type="password" minlength="8" required autocomplete="new-password"></div>
+        <button class="btn btn-dark btn-lg btn-block">Save password</button>
+      </form>
+    <% } %>
+  </div>
+</div>
+<%- include('_foot') %>

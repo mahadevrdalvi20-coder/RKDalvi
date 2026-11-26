@@ -1,0 +1,49 @@
+<%- include('_head') %>
+<div class="a-page">
+  <div class="a-head">
+    <h1>Projects</h1>
+    <form method="post" action="/admin/projects/new"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-gold"><%- icon('plus') %> Add project</button></form>
+  </div>
+  <form class="a-filters" method="get">
+    <div class="search-box"><%- icon('search') %><input type="search" name="q" value="<%= q %>" placeholder="Search projects" aria-label="Search projects"></div>
+    <div class="seg seg-scroll">
+      <% [['all','All'],['published','Live'],['draft','Drafts'],['hidden','Hidden']].forEach(([k,l]) => { %>
+        <a href="?status=<%= k %><%= q ? '&q=' + encodeURIComponent(q) : '' %>" class="<%= status === k ? 'active' : '' %>"><%= l %> <span><%= counts[k] %></span></a>
+      <% }) %>
+    </div>
+  </form>
+  <% if (!projects.length) { %>
+    <div class="empty"><%- icon('camera') %><h2>No projects <%= q || status !== 'all' ? 'found' : 'yet' %></h2><p>Tap <strong>Add project</strong>, choose your photos and publish — it takes about a minute.</p></div>
+  <% } else { %>
+  <ul class="plist">
+    <% projects.forEach(p => { %>
+      <li class="plist-item">
+        <a href="/admin/projects/<%= p.id %>" class="plist-main">
+          <span class="plist-thumb"><% if (p.cover_thumb) { %><img src="<%= media(p.cover_thumb) %>" alt="" loading="lazy"><% } else { %><%- icon('image') %><% } %></span>
+          <span class="plist-text">
+            <strong><%= p.title %></strong>
+            <small><%= [p.category_name, p.location, p.year].filter(Boolean).join(' · ') %></small>
+            <span class="plist-badges">
+              <span class="badge badge-<%= p.status %>"><%= { published: 'Live', draft: 'Draft', hidden: 'Hidden' }[p.status] %></span>
+              <% if (p.featured) { %><span class="badge badge-featured">★ Featured</span><% } %>
+              <span class="muted small"><%= p.photo_count %> photos<%= p.video_count ? ` · ${p.video_count} videos` : '' %> · <%= p.view_count %> views</span>
+            </span>
+          </span>
+        </a>
+        <div class="plist-actions">
+          <form method="post" action="/admin/projects/<%= p.id %>/quick"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="back" value="/admin/projects?status=<%= status %>">
+            <button name="what" value="feature" class="iconbtn <%= p.featured ? 'on' : '' %>" title="<%= p.featured ? 'Remove from Home banner' : 'Show on Home banner' %>" aria-label="Toggle featured"><%- icon(p.featured ? 'star_fill' : 'star') %></button>
+            <% if (p.status === 'published') { %>
+              <button name="what" value="hide" class="iconbtn" title="Hide from visitors" aria-label="Hide"><%- icon('eyeoff') %></button>
+            <% } else { %>
+              <button name="what" value="publish" class="iconbtn" title="Publish" aria-label="Publish"><%- icon('eye') %></button>
+            <% } %>
+          </form>
+          <% if (p.status === 'published') { %><a class="iconbtn" href="/work/<%= p.slug %>" target="_blank" rel="noopener" title="View on website" aria-label="View on website"><%- icon('external') %></a><% } %>
+        </div>
+      </li>
+    <% }) %>
+  </ul>
+  <% } %>
+</div>
+<%- include('_foot') %>

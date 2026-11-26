@@ -1,0 +1,14 @@
+<article class="pcard">
+  <a href="/work/<%= p.slug %>" class="pcard-link">
+    <div class="pcard-img">
+      <% if (p.cover_thumb) { %>
+        <img src="<%= media(p.cover_thumb) %>" alt="<%= p.title %>" loading="lazy" decoding="async">
+      <% } else { %><div class="ph"><%- icon('image') %></div><% } %>
+      <% if (p.category_name) { %><span class="chip-on-img"><%= p.category_name %></span><% } %>
+    </div>
+    <div class="pcard-body">
+      <h3><%= p.title %></h3>
+      <p class="pcard-meta"><% if (p.location) { %><%- icon('pin') %> <%= p.location %><% } %><% if (p.year) { %><span class="dot">·</span><%= p.year %><% } %></p>
+    </div>
+  </a>
+</article>

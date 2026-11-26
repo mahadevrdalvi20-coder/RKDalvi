@@ -1,0 +1,117 @@
+<% const extraHead = '<link rel="stylesheet" href="/vendor/photoswipe/photoswipe.css">';
+   const extraScripts = '<script type="module" src="/assets/js/gallery.js"></script>'; %>
+<%- include('../partials/head', { extraHead }) %>
+<%- include('../partials/header') %>
+<% if (isPreview) { %><div class="preview-bar">Preview — this project is <strong><%= p.status %></strong> and not visible to visitors. <a href="/admin/projects/<%= p.id %>">Back to editor</a></div><% } %>
+
+<section class="project-head">
+  <div class="wrap">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/work">Our Work</a><%- icon('right') %><% if (p.category_name) { %><a href="/work?category=<%= p.category_slug %>"><%= p.category_name %></a><%- icon('right') %><% } %><span><%= p.title %></span></nav>
+    <h1><%= p.title %></h1>
+    <ul class="pmeta">
+      <% if (p.category_name) { %><li><%- icon('layers') %> <%= p.category_name %></li><% } %>
+      <% if (p.location) { %><li><%- icon('pin') %> <%= p.location %></li><% } %>
+      <% if (p.year) { %><li><%- icon('calendar') %> Completed <%= p.year %></li><% } %>
+      <% if (p.show_client && p.client_name) { %><li><%- icon('building') %> Client: <%= p.client_name %></li><% } %>
+    </ul>
+  </div>
+</section>
+
+<% if (gallery.length) { const lead = gallery[0]; const rest = gallery.slice(1); %>
+<section class="gallery-wrap">
+  <div class="wrap">
+    <div class="pswp-gallery gallery" id="gallery">
+      <% gallery.forEach((m, i) => { %>
+        <a href="<%= media(m.file) %>" data-pswp-width="<%= m.width %>" data-pswp-height="<%= m.height %>" data-cropped="true" class="g-item <%= i === 0 ? 'g-lead' : '' %> <%= i > 6 ? 'g-more' : '' %>" target="_blank" rel="noopener">
+          <img src="<%= media(i === 0 ? m.medium : m.thumb) %>" alt="<%= m.caption || p.title + ' — photo ' + (i + 1) %>" <%- i === 0 ? 'fetchpriority="high"' : 'loading="lazy"' %> decoding="async" width="<%= m.width %>" height="<%= m.height %>">
+          <% if (m.caption) { %><span class="pswp-caption-content"><%= m.caption %></span><% } %>
+          <% if (i === 6 && gallery.length > 7) { %><span class="g-count">+<%= gallery.length - 7 %> photos</span><% } %>
+        </a>
+      <% }) %>
+    </div>
+    <p class="gallery-hint"><%- icon('image') %> <%= gallery.length %> photo<%= gallery.length === 1 ? '' : 's' %> — tap any photo to view full screen, swipe and zoom.</p>
+  </div>
+</section>
+<% } %>
+
+<section class="section section-top0">
+  <div class="wrap project-body">
+    <div class="project-main">
+      <% if (p.description) { %>
+        <h2>About this project</h2>
+        <div class="prose pre"><%= p.description %></div>
+      <% } %>
+
+      <% if (before.length && after.length) { %>
+        <h2>Before &amp; after</h2>
+        <% for (let i = 0; i < Math.min(before.length, after.length); i++) { %>
+          <div class="ba" data-ba>
+            <img src="<%= media(after[i].medium) %>" alt="After" class="ba-after" loading="lazy">
+            <div class="ba-before-wrap"><img src="<%= media(before[i].medium) %>" alt="Before" class="ba-before" loading="lazy"></div>
+            <span class="ba-label ba-l">Before</span><span class="ba-label ba-r">After</span>
+            <input type="range" min="0" max="100" value="50" aria-label="Drag to compare before and after" class="ba-range">
+            <span class="ba-handle" aria-hidden="true"><%- icon('compare') %></span>
+          </div>
+        <% } %>
+      <% } else if (before.length || after.length) { %>
+        <h2><%= before.length ? 'Before' : 'After' %></h2>
+        <div class="pswp-gallery gallery gallery-small">
+          <% before.concat(after).forEach(m => { %>
+            <a href="<%= media(m.file) %>" data-pswp-width="<%= m.width %>" data-pswp-height="<%= m.height %>" class="g-item" target="_blank" rel="noopener"><img src="<%= media(m.thumb) %>" alt="<%= m.caption || m.tag %>" loading="lazy"></a>
+          <% }) %>
+        </div>
+      <% } %>
+
+      <% if (videos.length) { %>
+        <h2>Video walk-through</h2>
+        <div class="videos">
+          <% videos.forEach(v => { %>
+            <figure class="video">
+              <video controls preload="none" playsinline <% if (v.thumb) { %>poster="<%= media(v.thumb) %>"<% } %>><source src="<%= media(v.file) %>"></video>
+              <% if (v.caption) { %><figcaption><%= v.caption %></figcaption><% } %>
+            </figure>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <aside class="project-side">
+      <div class="facts">
+        <h2 class="h3">Project details</h2>
+        <dl>
+          <% if (p.category_name) { %><dt>Category</dt><dd><%= p.category_name %></dd><% } %>
+          <% if (p.location) { %><dt>Location</dt><dd><%= p.location %></dd><% } %>
+          <% if (p.year) { %><dt>Year</dt><dd><%= p.year %></dd><% } %>
+          <% if (p.show_client && p.client_name) { %><dt>Client</dt><dd><%= p.client_name %></dd><% } %>
+          <% if (p.pieces) { %><dt>Rooms / pieces</dt><dd><%= p.pieces %></dd><% } %>
+          <% if (p.duration) { %><dt>Duration</dt><dd><%= p.duration %></dd><% } %>
+        </dl>
+        <% if (materials.length) { %>
+          <h3 class="h4">Materials used</h3>
+          <div class="tags"><% materials.forEach(m => { %><span class="tag"><%= m %></span><% }) %></div>
+        <% } %>
+        <% if (services.length) { %>
+          <h3 class="h4">Services</h3>
+          <div class="tags"><% services.forEach(sv => { %><a class="tag tag-link" href="/services/<%= sv.slug %>"><%= sv.name %></a><% }) %></div>
+        <% } %>
+      </div>
+      <div class="enquire-box">
+        <h2 class="h3">Want something similar?</h2>
+        <p>Share your requirements and we’ll prepare a quotation.</p>
+        <a href="/contact?project=<%= p.slug %>" class="btn btn-gold btn-block">Enquire about a similar project</a>
+        <a href="<%= waLink(`Hello ${s.name}, I saw your project "${p.title}" and would like something similar. ${baseUrl}/work/${p.slug}`) %>" class="btn btn-wa btn-block" target="_blank" rel="noopener"><%- icon('whatsapp') %> Ask on WhatsApp</a>
+        <button type="button" class="btn btn-ghost btn-block" data-share data-title="<%= p.title %> — <%= s.name %>" data-url="<%= baseUrl %>/work/<%= p.slug %>"><%- icon('share') %> Share this project</button>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<% if (related.length) { %>
+<section class="section section-cream">
+  <div class="wrap">
+    <div class="section-head"><h2>More <%= p.category_name ? p.category_name.toLowerCase() : '' %> projects</h2><a href="/work<%= p.category_slug ? '?category=' + p.category_slug : '' %>" class="link-arrow">View all <%- icon('arrow') %></a></div>
+    <div class="pgrid"><% related.forEach(r => { %><%- include('../partials/project-card', { p: r }) %><% }) %></div>
+  </div>
+</section>
+<% } %>
+<%- include('../partials/footer', { extraScripts }) %>

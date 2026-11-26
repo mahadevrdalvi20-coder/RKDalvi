@@ -1,0 +1,75 @@
+<%- include('_head') %>
+<div class="a-page">
+  <div class="a-head">
+    <div>
+      <a href="/admin/enquiries" class="back"><%- icon('back') %> Enquiries</a>
+      <h1><%= e.name %></h1>
+      <p class="muted">Received <%= u.fmtDateTime(e.created_at) %> · #<%= e.id %></p>
+    </div>
+    <div class="pager">
+      <% if (prev) { %><a class="iconbtn" href="/admin/enquiries/<%= prev.id %>" aria-label="Newer enquiry"><%- icon('left') %></a><% } %>
+      <% if (next) { %><a class="iconbtn" href="/admin/enquiries/<%= next.id %>" aria-label="Older enquiry"><%- icon('right') %></a><% } %>
+    </div>
+  </div>
+
+  <div class="contact-actions">
+    <a class="btn btn-dark btn-lg" href="tel:+91<%= e.mobile %>"><%- icon('phone') %> Call +91 <%= e.mobile %></a>
+    <a class="btn btn-wa btn-lg" href="<%= u.waLink(e.mobile, `Hello ${e.name}, this is ${s.name}. Thank you for your enquiry about ${e.service}${e.city ? ' in ' + e.city : ''}.`) %>" target="_blank" rel="noopener"><%- icon('whatsapp') %> WhatsApp</a>
+    <% if (e.email) { %><a class="btn btn-ghost btn-lg" href="mailto:<%= e.email %>?subject=<%= encodeURIComponent('Your enquiry with ' + s.name) %>"><%- icon('mail') %> Email</a><% } %>
+  </div>
+
+  <div class="a-grid-2 a-grid-wide">
+    <section class="a-card">
+      <h2 class="h3">Details</h2>
+      <dl class="dl">
+        <dt>Mobile</dt><dd><a href="tel:+91<%= e.mobile %>">+91 <%= e.mobile %></a></dd>
+        <% if (e.email) { %><dt>Email</dt><dd><a href="mailto:<%= e.email %>"><%= e.email %></a></dd><% } %>
+        <dt>Client type</dt><dd><%= e.client_type %></dd>
+        <dt>Service</dt><dd><%= e.service %></dd>
+        <dt>City</dt><dd><%= e.city %></dd>
+        <dt>Budget</dt><dd><%= e.budget || '—' %></dd>
+        <dt>Expected start</dt><dd><%= e.start_date ? u.fmtDate(e.start_date + (e.start_date.length === 7 ? '-01' : '') + ' 00:00:00', { day: undefined }) : '—' %></dd>
+        <% if (e.project_title) { %><dt>Similar to</dt><dd><a href="/work/<%= e.project_slug %>" target="_blank" rel="noopener"><%= e.project_title %></a></dd><% } %>
+      </dl>
+      <% if (e.message) { %><h3 class="h4">Message</h3><p class="pre msg"><%= e.message %></p><% } %>
+      <% if (files.length) { %>
+        <h3 class="h4">Attachments</h3>
+        <ul class="files">
+          <% files.forEach(f => { %>
+            <li><a href="/admin/enquiries/<%= e.id %>/files/<%= f.id %>" target="_blank" rel="noopener">
+              <% if (/^image\//.test(f.mime)) { %><img src="/admin/enquiries/<%= e.id %>/files/<%= f.id %>" alt="" loading="lazy"><% } else { %><span class="file-ic"><%- icon('file') %></span><% } %>
+              <span><%= f.original_name %><small><%= Math.ceil((f.bytes || 0) / 1024) %> KB</small></span>
+            </a></li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </section>
+
+    <section class="a-card" id="notes">
+      <h2 class="h3">Status</h2>
+      <form method="post" action="/admin/enquiries/<%= e.id %>/status" class="status-steps">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <% STATUSES.forEach(st => { %>
+          <button name="status" value="<%= st.key %>" class="step <%= e.status === st.key ? 'active badge-' + st.key : '' %>"><%= st.label %></button>
+        <% }) %>
+      </form>
+      <h2 class="h3 mt">Private notes</h2>
+      <form method="post" action="/admin/enquiries/<%= e.id %>/notes" class="form">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <div class="field"><label for="note" class="sr-only">Add a note</label><textarea id="note" name="body" rows="3" placeholder="e.g. Site visit fixed for Monday 11 am. Needs 25 rooms." required></textarea></div>
+        <button class="btn btn-dark">Add note</button>
+      </form>
+      <ul class="notes">
+        <% notes.forEach(n => { %><li><p class="pre"><%= n.body %></p><small><%= n.admin_name || 'Admin' %> · <%= u.fmtDateTime(n.created_at) %></small></li><% }) %>
+      </ul>
+    </section>
+  </div>
+
+  <section class="a-card danger-zone">
+    <form method="post" action="/admin/enquiries/<%= e.id %>/delete" data-confirm="Delete this enquiry from <%= e.name %> permanently?">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <button class="btn btn-danger btn-sm"><%- icon('trash') %> Delete enquiry</button>
+    </form>
+  </section>
+</div>
+<%- include('_foot') %>
