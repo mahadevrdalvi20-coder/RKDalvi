@@ -1,6 +1,11 @@
 'use strict';
 const nodemailer = require('nodemailer');
-const webpush = require('web-push');
+// web-push v4 is ESM-only: load it with import() (Vercel's runtime cannot require() ES modules).
+let webpushPromise = null;
+function loadWebpush() {
+  if (!webpushPromise) webpushPromise = import('web-push').then((m) => m.default || m);
+  return webpushPromise;
+}
 const config = require('./config');
 const { db, getSettings, setSetting } = require('./db');
 const { waLink } = require('./util');
@@ -40,6 +45,7 @@ async function vapidKeys() {
   if (config.vapid.publicKey && config.vapid.privateKey) return config.vapid;
   const s = await getSettings();
   if (s.vapid_public && s.vapid_private) return { publicKey: s.vapid_public, privateKey: s.vapid_private, subject: config.vapid.subject };
+  const webpush = await loadWebpush();
   const k = webpush.generateVAPIDKeys();
   await setSetting('vapid_public', k.publicKey);
   await setSetting('vapid_private', k.privateKey);
@@ -54,6 +60,7 @@ async function sendPushToAdmins(payload) {
   const subs = await db.all('SELECT ps.* FROM push_subscriptions ps JOIN admins a ON a.id = ps.admin_id WHERE a.active = 1');
   if (!subs.length) return 0;
   const k = await vapidKeys();
+  const webpush = await loadWebpush();
   webpush.setVapidDetails(k.subject, k.publicKey, k.privateKey);
   let sent = 0;
   await Promise.all(
